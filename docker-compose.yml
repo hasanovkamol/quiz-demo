@@ -88,7 +88,7 @@ services:
       - INFISICAL_API_URL=http://infisical:8080
       - Gemini__ApiKey=${GEMINI_API_KEY}
       - TelegramBot__Token=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_WEBAPP_URL=https://antibodies-garden-rip-casa.trycloudflare.com
+      - TELEGRAM_WEBAPP_URL=https://quiz-developer-uzb.loca.lt
     ports:
       - "5005:5000"
     networks:
