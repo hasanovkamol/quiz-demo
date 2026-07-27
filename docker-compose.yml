@@ -88,6 +88,7 @@ services:
       - INFISICAL_API_URL=http://infisical:8080
       - Gemini__ApiKey=${GEMINI_API_KEY}
       - TelegramBot__Token=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_WEBAPP_URL=https://antibodies-garden-rip-casa.trycloudflare.com
     ports:
       - "5005:5000"
     networks:
@@ -124,6 +125,17 @@ services:
       - backend
       - keycloak
       - infisical
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: quiz_cloudflare_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://gateway:80
+    networks:
+      - quiz-net
+    depends_on:
+      - gateway
+
 
 networks:
   quiz-net:

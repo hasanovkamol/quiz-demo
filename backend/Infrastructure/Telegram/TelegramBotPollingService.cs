@@ -43,6 +43,16 @@ public class TelegramBotPollingService : BackgroundService
             await _botClient.SetMyShortDescriptionAsync(
                 "QuizMaster PRO — Senior .NET & IT Quiz Bot",
                 cancellationToken: stoppingToken);
+
+            var webAppUrl = Environment.GetEnvironmentVariable("TELEGRAM_WEBAPP_URL");
+            if (!string.IsNullOrWhiteSpace(webAppUrl) && webAppUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                await _botClient.SetChatMenuButtonAsync(menuButton: new MenuButtonWebApp
+                {
+                    Text = "📱 Mini App",
+                    WebApp = new WebAppInfo { Url = webAppUrl }
+                }, cancellationToken: stoppingToken);
+            }
         }
         catch (Exception ex)
         {
