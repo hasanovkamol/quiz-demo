@@ -17,7 +17,7 @@ The CI/CD pipeline triggers automatically on any `push` or `pull_request` to `ma
                      ▼                                ▼
  ┌────────────────────────────────────┐ ┌─────────────────────────────────┐
  │        JOB 1: backend-ci           │ │       JOB 2: frontend-ci        │
- │ - Setup .NET 9 SDK                 │ │ - Setup Node.js 20.x            │
+ │ - Setup .NET 9 SDK                 │ │ - Setup Node.js 22.x            │
  │ - Restore & Build Web API          │ │ - Install npm packages          │
  │ - Run Integration Tests (7/7 Pass) │ │ - Run Unit Tests (30/30 Pass)   │
  │                                    │ │ - Build Angular Production Bundle│
@@ -38,5 +38,5 @@ The CI/CD pipeline triggers automatically on any `push` or `pull_request` to `ma
 ## 🚀 Pipeline Execution Jobs
 
 1. **`backend-ci`**: Restores NuGet dependencies, builds C# Web API, and executes all 7 `xUnit` integration tests against `InMemoryDatabase`.
-2. **`frontend-ci`**: Installs npm dependencies, runs all 30 Angular Karma/Jasmine unit tests, and verifies `ng build` production bundle generation.
+2. **`frontend-ci`**: Configured with **Node.js 22.x** (required by Angular CLI 22), installs npm dependencies, runs all 30 Angular Karma/Jasmine unit tests, and verifies `ng build` production bundle generation.
 3. **`docker-verification`**: Ensures `docker-compose.yml` syntax integrity and builds container images (`db`, `keycloak`, `backend`, `ui`, `gateway`).
