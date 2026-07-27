@@ -2,25 +2,17 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of } from 'rxjs';
 import { Quiz, QuizAttempt } from '../models/quiz.model';
+import { AppConfigService } from './app-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class QuizApiService {
   private readonly http = inject(HttpClient);
+  private readonly appConfig = inject(AppConfigService);
 
-  // Dynamic API base URL:
-  // - GitHub Pages (hasanovkamol.github.io) → use local gateway directly (Cloudflare tunnel or localhost)
-  // - Local Docker / gateway → relative /api (same origin)
-  private readonly baseUrl = this.resolveApiBase();
-
-  private resolveApiBase(): string {
-    if (typeof window !== 'undefined' && window.location.hostname === 'hasanovkamol.github.io') {
-      // GitHub Pages → Backend is served via local gateway on the LAN machine
-      // Use the Cloudflare tunnel URL or direct localhost gateway
-      return 'http://localhost:5005/api';
-    }
-    return '/api';
+  private get baseUrl(): string {
+    return this.appConfig.apiUrl;
   }
 
   getQuizzes(): Observable<Quiz[]> {
