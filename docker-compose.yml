@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:16-alpine
@@ -88,7 +86,7 @@ services:
       - Keycloak__Authority=http://keycloak:8080/realms/quizmaster-realm
       - INFISICAL_API_URL=http://infisical:8000
     ports:
-      - "5000:5000"
+      - "5005:5000"
     networks:
       - quiz-net
     depends_on:
