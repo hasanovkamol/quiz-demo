@@ -1,42 +1,29 @@
-# Infisical Centralized Secret & Configuration Management Guide
+# Infisical Centralized Secret & Config Management
 
-Guide for managing ASP.NET Core backend configurations and secrets using Infisical (`http://localhost:8000`).
-
----
-
-## 🔑 Infisical Architecture & Container Setup
-
-Infisical runs as a standalone service in [`docker-compose.yml`](file:///home/user02/Projects/AI%20Projects/Qiuz/docker-compose.yml):
-
-- **Infisical Server (`quiz_infisical_secrets`)**: Accessible at `http://localhost:8000`.
-- **Infisical Database (`infisical_postgres_db`)**: Dedicated PostgreSQL 16 database.
-- **Infisical Redis Cache (`infisical_redis_cache`)**: Redis 7 cache.
+Documentation of Infisical Vault secret management setup.
 
 ---
 
-## 🚀 How Infisical Injects Secrets into Backend
+## 🔑 Infisical Architecture & Port Configuration
 
-The backend [`Dockerfile`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Dockerfile) installs the Infisical CLI binary and wraps container startup:
-
-```dockerfile
-ENTRYPOINT ["infisical", "run", "--", "dotnet", "QuizApi.dll"]
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   INFISICAL SECRET VAULT CONTAINER                     │
+│ Image: infisical/infisical:latest                                      │
+│ Port Mapping: 8000:8080 (Host Port 8000 -> Container Port 8080)        │
+│ Environment: PORT=8080, SITE_URL=http://localhost:8000                │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-When the container boots, `infisical run` dynamically fetches secrets from `http://infisical:8000` and injects them as standard environment variables into ASP.NET Core.
+- **Infisical Web UI URL**: `http://localhost:8000`
+- **Internal Port**: `8080` (mapped to host port `8000`).
+- **PostgreSQL Database**: `infisical_postgres_db` (Port 5432).
+- **Redis Cache**: `infisical_redis_cache` (Port 6379).
 
 ---
 
-## 🛠 Infisical Web Dashboard Secret Setup Guide
+## 🚀 Accessing Infisical Web Dashboard
 
-1. **Access Dashboard**:
-   - Open browser: `http://localhost:8000`.
-   - Register root admin account.
-2. **Create Project**:
-   - Project Name: `QuizMaster PRO`.
-3. **Add Managed Secrets**:
-   - `ConnectionStrings__DefaultConnection`: `Host=db;Port=5432;Database=quizdb;Username=postgres;Password=postgres`
-   - `Jwt__SecretKey`: `QuizMaster_Super_Secret_JWT_Key_2026_Enterprise_Secure!`
-   - `Jwt__Issuer`: `QuizMasterAPI`
-   - `Jwt__Audience`: `QuizMasterApp`
-   - `Keycloak__Authority`: `http://keycloak:8080/realms/quizmaster-realm`
-   - `Ai__GeminiApiKey`: `<YOUR_GEMINI_API_KEY>`
+1. Open `http://localhost:8000` in your web browser.
+2. Complete the initial Admin Signup / Setup.
+3. Manage secrets, database connection strings, JWT keys, and Gemini AI API Keys centrally!
