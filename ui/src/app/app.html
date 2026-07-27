@@ -1,16 +1,17 @@
 <div class="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
   
-  <!-- App Navbar -->
+  <!-- App Navbar with Role Portal Switcher -->
   <app-navbar 
+    [activePortal]="activePortal()"
+    (switchPortal)="setPortal($event)"
     (openCreator)="isCreatorOpen.set(true)" 
-    (openAdmin)="isAdminOpen.set(!isAdminOpen())"
     (toggleHistory)="isHistoryOpen.set(true)">
   </app-navbar>
 
-  <!-- Main Dynamic View -->
+  <!-- Main Dynamic View Segregated by Portal -->
   <main class="flex-1">
-    @if (isAdminOpen()) {
-      <app-admin-dashboard></app-admin-dashboard>
+    @if (activePortal() === 'admin') {
+      <app-admin-dashboard (openCreator)="isCreatorOpen.set(true)"></app-admin-dashboard>
     } @else if (quizService.isQuizActive()) {
       <app-quiz-play></app-quiz-play>
     } @else if (quizService.isQuizCompleted()) {
@@ -38,7 +39,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        <span>QuizMaster PRO • Angular 18+ & .NET 9 ASP.NET Core API (PostgreSQL)</span>
+        <span>QuizMaster PRO • Dedicated User & Admin Portals • Angular 18+ & .NET 10 (PostgreSQL)</span>
       </div>
       <div>
         Local Network (LAN) & Semantic Kernel AI Platform • © 2026

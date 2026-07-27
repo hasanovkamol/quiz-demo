@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QuizApiService } from '../../services/quiz-api.service';
@@ -17,33 +17,45 @@ import { QuizAttempt } from '../../models/quiz.model';
         <div>
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-bold mb-2">
             <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-            Tizim Admin Paneli
+            Tizim Boshqaruv Portali
           </div>
           <h1 class="text-2xl sm:text-3xl font-extrabold text-white">
-            Admin <span class="gradient-text">Boshqaruv Paneli</span>
+            Admin <span class="gradient-text">Management Console</span>
           </h1>
         </div>
 
-        <!-- Navigation Tabs -->
-        <div class="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+        <div class="flex items-center gap-3">
+          <!-- Create Test Button -->
           <button 
-            (click)="activeTab.set('attempts')"
-            [class]="activeTab() === 'attempts' ? 
-              'px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 shadow-md shadow-indigo-600/30 transition' : 
-              'px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition'">
-            Foydalanuvchilar Natijalari
+            (click)="openCreator.emit()"
+            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-600/30 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+            Yangi Test Yaratish
           </button>
 
-          <button 
-            (click)="activeTab.set('ai-generator')"
-            [class]="activeTab() === 'ai-generator' ? 
-              'px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 shadow-md shadow-purple-600/30 transition flex items-center gap-1.5' : 
-              'px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1.5'">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            AI Savollar Generatori
-          </button>
+          <!-- Navigation Tabs -->
+          <div class="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+            <button 
+              (click)="activeTab.set('attempts')"
+              [class]="activeTab() === 'attempts' ? 
+                'px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 shadow-md shadow-indigo-600/30 transition' : 
+                'px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition'">
+              Test Topshirishlar
+            </button>
+
+            <button 
+              (click)="activeTab.set('ai-generator')"
+              [class]="activeTab() === 'ai-generator' ? 
+                'px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 shadow-md shadow-purple-600/30 transition flex items-center gap-1.5' : 
+                'px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1.5'">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              AI Generatori
+            </button>
+          </div>
         </div>
       </div>
 
@@ -220,6 +232,8 @@ import { QuizAttempt } from '../../models/quiz.model';
 export class AdminDashboardComponent implements OnInit {
   private readonly apiService = inject(QuizApiService);
   readonly quizService = inject(QuizService);
+
+  readonly openCreator = output<void>();
 
   readonly activeTab = signal<'attempts' | 'ai-generator'>('attempts');
   readonly userAttempts = signal<QuizAttempt[]>([]);

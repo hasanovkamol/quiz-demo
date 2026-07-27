@@ -1,4 +1,4 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QuizService } from '../../services/quiz.service';
 
@@ -10,7 +10,7 @@ import { QuizService } from '../../services/quiz.service';
     <header class="sticky top-0 z-40 w-full glass-card border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
-        <!-- Logo -->
+        <!-- Logo & Active Portal Indicator -->
         <div class="flex items-center gap-3 cursor-pointer" (click)="goHome()">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -20,51 +20,75 @@ import { QuizService } from '../../services/quiz.service';
           <div>
             <span class="text-lg sm:text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
               Quiz<span class="gradient-text">Master</span>
-              <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">PRO</span>
+              <span [class]="activePortal() === 'admin' ? 
+                'text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20' : 
+                'text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'">
+                {{ activePortal() === 'admin' ? 'ADMIN PORTAL' : 'USER REJIMI' }}
+              </span>
             </span>
-            <p class="text-xs text-slate-400 hidden sm:block">Interaktiv Test & Bilim Platformasi</p>
+            <p class="text-xs text-slate-400 hidden sm:block">
+              {{ activePortal() === 'admin' ? 'Boshqaruv & AI Generatsiya Paneli' : 'Interaktiv Test & Bilim Sinash Portali' }}
+            </p>
           </div>
         </div>
 
-        <!-- Desktop Action Buttons -->
+        <!-- Role Mode Switcher & Navigation Actions -->
         <div class="hidden md:flex items-center gap-3">
-          @if (quizService.currentUserName(); as userName) {
+          
+          <!-- Mode Switcher Pill -->
+          <div class="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs">
             <button 
-              (click)="quizService.isNameModalOpen.set(true)"
-              class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-900 border border-slate-800 hover:bg-slate-800 transition">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              {{ userName }}
+              (click)="switchPortal.emit('user')"
+              [class]="activePortal() === 'user' ? 
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-white bg-indigo-600 shadow-md shadow-indigo-600/30 transition' : 
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition'">
+              <span>🎓</span> User Mode
             </button>
+
+            <button 
+              (click)="switchPortal.emit('admin')"
+              [class]="activePortal() === 'admin' ? 
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-white bg-purple-600 shadow-md shadow-purple-600/30 transition' : 
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition'">
+              <span>⚙️</span> Admin Console
+            </button>
+          </div>
+
+          <!-- USER PORTAL ACTIONS -->
+          @if (activePortal() === 'user') {
+            @if (quizService.currentUserName(); as userName) {
+              <button 
+                (click)="quizService.isNameModalOpen.set(true)"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-900 border border-slate-800 hover:bg-slate-800 transition">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                {{ userName }}
+              </button>
+            }
+
+            @if (quizService.quizHistory().length > 0) {
+              <button 
+                (click)="toggleHistory.emit()"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:bg-slate-800 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Tarix ({{ quizService.quizHistory().length }})
+              </button>
+            }
           }
 
-          <button 
-            (click)="openAdmin.emit()"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-purple-300 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            </svg>
-            Admin Panel
-          </button>
-
-          @if (quizService.quizHistory().length > 0) {
+          <!-- ADMIN PORTAL ACTIONS -->
+          @if (activePortal() === 'admin') {
             <button 
-              (click)="toggleHistory.emit()"
-              class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:bg-slate-800 transition">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              (click)="openCreator.emit()"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-md shadow-purple-600/30 transition-all hover:scale-105 active:scale-95">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
               </svg>
-              Tarix ({{ quizService.quizHistory().length }})
+              Yangi Test Yaratish
             </button>
           }
 
-          <button 
-            (click)="openCreator.emit()"
-            class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-md shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-            </svg>
-            Yangi Test
-          </button>
         </div>
 
         <!-- Mobile Hamburger Button -->
@@ -82,48 +106,60 @@ import { QuizService } from '../../services/quiz.service';
       <!-- Mobile Sliding Navigation Drawer -->
       @if (isMobileMenuOpen()) {
         <div class="md:hidden border-t border-slate-800/80 bg-slate-950/95 px-4 pt-3 pb-5 space-y-3 backdrop-blur-xl animate-fadeIn">
-          @if (quizService.currentUserName(); as userName) {
+          
+          <!-- Mode Switcher in Mobile -->
+          <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs mb-2">
             <button 
-              (click)="quizService.isNameModalOpen.set(true); isMobileMenuOpen.set(false)"
-              class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-900 border border-slate-800">
-              <span class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                {{ userName }}
-              </span>
-              <span class="text-[10px] text-slate-400 font-normal">O'zgartirish</span>
+              (click)="switchPortal.emit('user'); isMobileMenuOpen.set(false)"
+              [class]="activePortal() === 'user' ? 
+                'flex items-center justify-center gap-1.5 py-2 rounded-lg font-bold text-white bg-indigo-600 shadow-md' : 
+                'flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-slate-400'">
+              <span>🎓</span> User Mode
             </button>
-          }
+            <button 
+              (click)="switchPortal.emit('admin'); isMobileMenuOpen.set(false)"
+              [class]="activePortal() === 'admin' ? 
+                'flex items-center justify-center gap-1.5 py-2 rounded-lg font-bold text-white bg-purple-600 shadow-md' : 
+                'flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-slate-400'">
+              <span>⚙️</span> Admin Console
+            </button>
+          </div>
 
-          <div class="grid grid-cols-2 gap-2">
-            <button 
-              (click)="openAdmin.emit(); isMobileMenuOpen.set(false)"
-              class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-purple-300 bg-purple-500/10 border border-purple-500/20">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              </svg>
-              Admin Panel
-            </button>
+          @if (activePortal() === 'user') {
+            @if (quizService.currentUserName(); as userName) {
+              <button 
+                (click)="quizService.isNameModalOpen.set(true); isMobileMenuOpen.set(false)"
+                class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-900 border border-slate-800">
+                <span class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  {{ userName }}
+                </span>
+                <span class="text-[10px] text-slate-400">Profil</span>
+              </button>
+            }
 
             @if (quizService.quizHistory().length > 0) {
               <button 
                 (click)="toggleHistory.emit(); isMobileMenuOpen.set(false)"
-                class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800">
+                class="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Tarix ({{ quizService.quizHistory().length }})
               </button>
             }
-          </div>
+          }
 
-          <button 
-            (click)="openCreator.emit(); isMobileMenuOpen.set(false)"
-            class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 shadow-md shadow-indigo-600/30">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-            </svg>
-            Yangi Test Yaratish
-          </button>
+          @if (activePortal() === 'admin') {
+            <button 
+              (click)="openCreator.emit(); isMobileMenuOpen.set(false)"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 shadow-md">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              Yangi Test Yaratish
+            </button>
+          }
         </div>
       }
     </header>
@@ -131,14 +167,16 @@ import { QuizService } from '../../services/quiz.service';
 })
 export class NavbarComponent {
   readonly quizService = inject(QuizService);
+  readonly activePortal = input<'user' | 'admin'>('user');
   readonly isMobileMenuOpen = signal<boolean>(false);
 
+  readonly switchPortal = output<'user' | 'admin'>();
   readonly openCreator = output<void>();
-  readonly openAdmin = output<void>();
   readonly toggleHistory = output<void>();
 
   goHome(): void {
     this.quizService.resetQuiz();
+    this.switchPortal.emit('user');
     this.isMobileMenuOpen.set(false);
   }
 }

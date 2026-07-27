@@ -30,7 +30,11 @@ import { AdminDashboardComponent } from './components/admin/admin-dashboard.comp
 export class App {
   readonly quizService = inject(QuizService);
 
+  readonly activePortal = signal<'user' | 'admin'>('user');
   readonly isCreatorOpen = signal<boolean>(false);
   readonly isHistoryOpen = signal<boolean>(false);
-  readonly isAdminOpen = signal<boolean>(false);
+
+  setPortal(mode: 'user' | 'admin'): void {
+    this.activePortal.set(mode);
+  }
 }
