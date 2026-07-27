@@ -94,6 +94,29 @@ export class AuthService
   }
 
   /**
+   * Renders standard Google Sign-In button into a DOM container element
+   */
+  renderGoogleButton(containerElement: HTMLElement, onSuccess: (user: User) => void, onError: () => void): void {
+    const attachButton = () => {
+      if (typeof google !== 'undefined' && google?.accounts?.id) {
+        this._pendingGoogleCallback = onSuccess;
+        this._pendingGoogleErrorCallback = onError;
+        google.accounts.id.renderButton(containerElement, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+          width: 320
+        });
+      } else {
+        setTimeout(attachButton, 300);
+      }
+    };
+    attachButton();
+  }
+
+  /**
    * Triggers Google One Tap / Sign-In popup.
    * onSuccess callback is called with User after backend authentication.
    */
