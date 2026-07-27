@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { User, AuthResponse } from '../models/user.model';
+import { AppConfigService } from './app-config.service';
 
 const LOCAL_STORAGE_TOKEN_KEY = 'quizmaster_jwt_token';
 const LOCAL_STORAGE_REFRESH_TOKEN_KEY = 'quizmaster_refresh_token';
@@ -30,6 +31,9 @@ declare const google: {
 export class AuthService
 {
   private readonly http = inject(HttpClient);
+  private readonly appConfig = inject(AppConfigService);
+
+  private get apiBase(): string { return this.appConfig.apiUrl; }
 
   // ↓ Replace with your actual Google Client ID from Google Cloud Console
   // https://console.cloud.google.com → APIs & Services → Credentials
@@ -193,7 +197,7 @@ export class AuthService
 
   googleLogin(idToken: string, fallbackName?: string, fallbackEmail?: string): Observable<AuthResponse>
   {
-    return this.http.post<AuthResponse>('/api/auth/google-login', {
+    return this.http.post<AuthResponse>(`${this.apiBase}/auth/google-login`, {
       idToken,
       fallbackName,
       fallbackEmail
@@ -209,7 +213,7 @@ export class AuthService
 
     if (!currentRefresh || !user) return of(null);
 
-    return this.http.post<AuthResponse>('/api/auth/refresh', {
+    return this.http.post<AuthResponse>(`${this.apiBase}/auth/refresh`, {
       refreshToken: currentRefresh,
       userId: user.id
     }).pipe(
