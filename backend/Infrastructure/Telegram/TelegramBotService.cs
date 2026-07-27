@@ -76,6 +76,7 @@ public class TelegramBotService
     private async Task HandleMessageAsync(Message message)
     {
         var chatId = message.Chat.Id;
+        var userId = message.From?.Id ?? 0;
         var text = message.Text?.Trim() ?? "";
 
         if (text.StartsWith("/start"))
@@ -85,6 +86,10 @@ public class TelegramBotService
         else if (text.StartsWith("/quiz"))
         {
             await SendCategorySelectionAsync(chatId);
+        }
+        else if (text.StartsWith("/results"))
+        {
+            await SendUserResultsHistoryAsync(chatId, userId, page: 1, selectedCategory: "all");
         }
         else if (text.StartsWith("/stats"))
         {
@@ -98,7 +103,7 @@ public class TelegramBotService
         {
             await _botClient.SendTextMessageAsync(
                 chatId: chatId,
-                text: "📌 **Buyruqlar ro'yxati:**\n\n/quiz — Test ishlashni boshlash (Ketma-ket savollar)\n/stats — Shaxsiy statistikangiz\n/leaderboard — Top dasturchilar reytingi",
+                text: "📌 **Buyruqlar ro'yxati:**\n\n/quiz — Test ishlashni boshlash\n/results — Natijalaringiz tarixi (Pagination)\n/stats — Shaxsiy statistikangiz\n/leaderboard — Top dasturchilar reytingi",
                 parseMode: ParseMode.Markdown
             );
         }
@@ -135,16 +140,16 @@ public class TelegramBotService
         });
         buttons.Add(new List<InlineKeyboardButton>
         {
-            InlineKeyboardButton.WithCallbackData("📬 Messaging", "cat:messaging"),
-            InlineKeyboardButton.WithCallbackData("🐳 DevOps", "cat:devops"),
+            InlineKeyboardButton.WithCallbackData("📋 Natijalar Tarixi", "respage:1:all"),
+            InlineKeyboardButton.WithCallbackData("🏆 Reyting", "showleaderboard"),
         });
 
         var inlineKeyboard = new InlineKeyboardMarkup(buttons);
 
         string welcomeText = $"<b>Assalomu alaykum, {name}!</b> 🇺🇿\n\n" +
                              $"<b>QuizMaster PRO</b> botiga xush kelibsiz!\n" +
-                             $"Ushbu bot orqali siz IT sohasidagi 720 ta senior darajadagi professional testlarni ketma-ket topshirishingiz mumkin.\n\n" +
-                             $"👇 <b>Kategoriyani tanlang:</b>";
+                             $"Ushbu bot orqali siz IT sohasidagi 720 ta senior darajadagi professional testlarni topshirishingiz va o'z natijalaringiz tarixini ko'rishingiz mumkin.\n\n" +
+                             $"👇 <b>Kategoriyani tanlang yoki buyruqlardan foydalaning:</b>";
 
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
@@ -193,10 +198,20 @@ public class TelegramBotService
         if (callbackQuery.Message == null || string.IsNullOrEmpty(callbackQuery.Data)) return;
 
         var chatId = callbackQuery.Message.Chat.Id;
+        var messageId = callbackQuery.Message.MessageId;
         var userId = callbackQuery.From.Id;
         var data = callbackQuery.Data;
 
-        if (data.StartsWith("cat:"))
+        if (data == "ignore")
+        {
+            await _botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
+            return;
+        }
+        else if (data == "showleaderboard")
+        {
+            await SendLeaderboardAsync(chatId);
+        }
+        else if (data.StartsWith("cat:"))
         {
             var category = data.Substring(4);
             var inlineKeyboard = new InlineKeyboardMarkup(new[]
@@ -227,6 +242,15 @@ public class TelegramBotService
                 var category = parts[1];
                 var difficulty = parts[2];
                 await StartSequentialQuizSessionAsync(userId, chatId, category, difficulty);
+            }
+        }
+        else if (data.StartsWith("respage:"))
+        {
+            var parts = data.Split(':');
+            if (parts.Length >= 3 && int.TryParse(parts[1], out int page))
+            {
+                var selectedCategory = parts[2];
+                await SendUserResultsHistoryAsync(chatId, userId, page, selectedCategory, messageId);
             }
         }
 
@@ -285,7 +309,6 @@ public class TelegramBotService
 
         var question = session.Questions[session.CurrentIndex];
 
-        // Telegram native poll options MUST NOT exceed 100 chars
         var optionsTexts = question.Options
             .Select(o => o.Text.Length > 98 ? o.Text.Substring(0, 95) + "..." : o.Text)
             .ToList();
@@ -424,7 +447,11 @@ public class TelegramBotService
                 var attempt = new QuizAttempt
                 {
                     QuizId = quiz.Id,
+                    QuizTitle = quiz.Title,
+                    CategoryName = quiz.Category,
                     UserName = userName,
+                    TotalQuestions = total,
+                    CorrectAnswersCount = correct,
                     ScorePercentage = percentage,
                     CompletedAt = DateTime.UtcNow
                 };
@@ -442,13 +469,139 @@ public class TelegramBotService
                            $"📚 <b>Bo'lim:</b> {session.Category.ToUpper()} ({session.Difficulty})\n" +
                            $"🎯 <b>Natija:</b> {correct} / {total} ball ({Math.Round(percentage, 1)}%)\n\n" +
                            $"🏆 <i>Natijangiz saqlandi!</i>\n\n" +
-                           $"Qayta test topshirish uchun /quiz buyrug'ini bosing.";
+                           $"Natijalar tarixini ko'rish uchun /results buyrug'ini bosing.";
 
         await _botClient.SendTextMessageAsync(
             chatId: session.ChatId,
             text: resultMsg,
             parseMode: ParseMode.Html
         );
+    }
+
+    public async Task SendUserResultsHistoryAsync(long chatId, long userId, int page = 1, string selectedCategory = "all", int? messageIdToEdit = null)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+
+        if (dbContext.Database.IsNpgsql())
+        {
+            await dbContext.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
+                "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
+        }
+
+        var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == userId);
+        string userName = dbUser?.Name ?? "";
+
+        var query = dbContext.QuizAttempts.AsQueryable();
+
+        if (!string.IsNullOrEmpty(userName))
+        {
+            query = query.Where(a => a.UserName == userName);
+        }
+
+        if (selectedCategory != "all")
+        {
+            query = query.Where(a => a.CategoryName.ToLower() == selectedCategory.ToLower());
+        }
+
+        int totalItems = await query.CountAsync();
+
+        if (totalItems == 0)
+        {
+            string emptyMsg = "📝 <b>Sizda hali saqlangan test natijalari mavjud emas.</b>\n\n" +
+                               "Test topshirish uchun /quiz buyrug'ini bosing.";
+            if (messageIdToEdit.HasValue)
+            {
+                await _botClient.EditMessageTextAsync(chatId, messageIdToEdit.Value, emptyMsg, parseMode: ParseMode.Html);
+            }
+            else
+            {
+                await _botClient.SendTextMessageAsync(chatId, emptyMsg, parseMode: ParseMode.Html);
+            }
+            return;
+        }
+
+        int pageSize = 5;
+        int totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+
+        var attempts = await query
+            .OrderByDescending(a => a.CompletedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        string categoryHeader = selectedCategory == "all" ? "Barcha bo'limlar" : selectedCategory.ToUpper();
+        string text = $"📋 <b>TEST NATIJALARINGIZ TARIXI</b>\n" +
+                      $"📂 <b>Kategoriya:</b> {categoryHeader}\n" +
+                      $"📄 <b>Sahifa:</b> {page} / {totalPages} (Jami: {totalItems} ta)\n" +
+                      $"───────────────────────\n\n";
+
+        for (int i = 0; i < attempts.Count; i++)
+        {
+            var item = attempts[i];
+            int itemNum = ((page - 1) * pageSize) + i + 1;
+            string categoryName = !string.IsNullOrEmpty(item.CategoryName) ? item.CategoryName.ToUpper() : "GENERAL";
+            double score = Math.Round(item.ScorePercentage, 1);
+
+            string statusBadge = score >= 80 ? "🟢 A'lo" : score >= 50 ? "🟡 Qoniqarli" : "🔴 Zayif";
+            string dateStr = item.CompletedAt.ToString("dd-MM-yyyy HH:mm");
+
+            text += $"<b>{itemNum}. {categoryName}</b>\n" +
+                    $"🎯 Ball: <b>{score}%</b> ({item.CorrectAnswersCount}/{item.TotalQuestions}) — {statusBadge}\n" +
+                    $"📅 Vaqt: <i>{dateStr}</i>\n\n";
+        }
+
+        text += $"───────────────────────";
+
+        // Build Inline Navigation & Category Filter Keyboards
+        var keyboardRows = new List<List<InlineKeyboardButton>>();
+
+        // Row 1: Category filters
+        keyboardRows.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData(selectedCategory == "all" ? "✅ Barchasi" : "🌐 Barchasi", "respage:1:all"),
+            InlineKeyboardButton.WithCallbackData(selectedCategory == "dotnet" ? "✅ ASP.NET" : "⚡ ASP.NET", "respage:1:dotnet"),
+            InlineKeyboardButton.WithCallbackData(selectedCategory == "efcore" ? "✅ EF Core" : "🗄️ EF Core", "respage:1:efcore"),
+            InlineKeyboardButton.WithCallbackData(selectedCategory == "angular" ? "✅ Angular" : "🅰️ Angular", "respage:1:angular"),
+        });
+
+        // Row 2: Pagination buttons
+        var prevBtn = page > 1 
+            ? InlineKeyboardButton.WithCallbackData("⬅️ Avvalgi", $"respage:{page - 1}:{selectedCategory}")
+            : InlineKeyboardButton.WithCallbackData("⏸️", "ignore");
+
+        var pageIndicatorBtn = InlineKeyboardButton.WithCallbackData($"📄 {page} / {totalPages}", "ignore");
+
+        var nextBtn = page < totalPages
+            ? InlineKeyboardButton.WithCallbackData("Keyingi ➡️", $"respage:{page + 1}:{selectedCategory}")
+            : InlineKeyboardButton.WithCallbackData("⏸️", "ignore");
+
+        keyboardRows.Add(new List<InlineKeyboardButton> { prevBtn, pageIndicatorBtn, nextBtn });
+
+        var inlineKeyboard = new InlineKeyboardMarkup(keyboardRows);
+
+        if (messageIdToEdit.HasValue)
+        {
+            await _botClient.EditMessageTextAsync(
+                chatId: chatId,
+                messageId: messageIdToEdit.Value,
+                text: text,
+                parseMode: ParseMode.Html,
+                replyMarkup: inlineKeyboard
+            );
+        }
+        else
+        {
+            await _botClient.SendTextMessageAsync(
+                chatId: chatId,
+                text: text,
+                parseMode: ParseMode.Html,
+                replyMarkup: inlineKeyboard
+            );
+        }
     }
 
     private async Task SendUserStatsAsync(long chatId, TelegramUser? tgUser)

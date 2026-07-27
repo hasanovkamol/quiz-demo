@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace QuizApi.Infrastructure.Telegram;
@@ -20,9 +21,24 @@ public class TelegramBotPollingService : BackgroundService
         _logger = logger;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Telegram Bot Polling Service starting...");
+
+        try
+        {
+            await _botClient.SetMyCommandsAsync(new[]
+            {
+                new BotCommand { Command = "quiz", Description = "Test topshirish (Ketma-ket savollar)" },
+                new BotCommand { Command = "results", Description = "Test natijalaringiz tarixi (Pagination)" },
+                new BotCommand { Command = "stats", Description = "Shaxsiy statistikangiz" },
+                new BotCommand { Command = "leaderboard", Description = "Top dasturchilar reytingi" }
+            }, cancellationToken: stoppingToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not register BotCommands menu");
+        }
 
         var receiverOptions = new ReceiverOptions
         {
@@ -39,7 +55,5 @@ public class TelegramBotPollingService : BackgroundService
             receiverOptions: receiverOptions,
             cancellationToken: stoppingToken
         );
-
-        return Task.CompletedTask;
     }
 }
