@@ -77,10 +77,15 @@ builder.Services.AddAuthorization(options =>
     }
 });
 
-// Register Telegram Bot Client & Service
-var telegramBotToken = builder.Configuration["TelegramBot:Token"] ?? "1234567890:DEMO_TELEGRAM_BOT_TOKEN";
+// Register Telegram Bot Client, Service and Polling Background Worker
+var telegramBotToken = builder.Configuration["TelegramBot:Token"] ?? "8685158169:AAHdNt-d0slr35R5Pe1_SMxI-eIFwcabH2I";
 builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(telegramBotToken));
 builder.Services.AddSingleton<TelegramBotService>();
+
+if (builder.Environment.EnvironmentName != "Testing")
+{
+    builder.Services.AddHostedService<TelegramBotPollingService>();
+}
 
 // Register Application & Infrastructure Services
 builder.Services.AddScoped<IAuthService, AuthService>();
