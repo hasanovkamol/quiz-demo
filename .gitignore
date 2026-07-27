@@ -20,3 +20,10 @@ coverage/
 Thumbs.db
 tmp/
 *.log
+
+# Local secrets - DO NOT COMMIT
+backend/appsettings.Development.json
+
+# Local environment secrets
+.env
+*.env.local

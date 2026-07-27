@@ -86,6 +86,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=quizdb;Username=postgres;Password=postgres
       - Keycloak__Authority=http://keycloak:8080/realms/quizmaster-realm
       - INFISICAL_API_URL=http://infisical:8080
+      - Gemini__ApiKey=${GEMINI_API_KEY}
     ports:
       - "5005:5000"
     networks:
