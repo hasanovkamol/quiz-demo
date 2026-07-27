@@ -87,6 +87,8 @@ services:
       - Keycloak__Authority=http://keycloak:8080/realms/quizmaster-realm
       - INFISICAL_API_URL=http://infisical:8080
       - Gemini__ApiKey=${GEMINI_API_KEY}
+      - TelegramBot__Token=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_WEBAPP_URL=${TELEGRAM_WEBAPP_URL}
     ports:
       - "5005:5000"
     networks:
