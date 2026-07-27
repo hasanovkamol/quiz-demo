@@ -33,7 +33,7 @@ export class AuthService
 
   // ↓ Replace with your actual Google Client ID from Google Cloud Console
   // https://console.cloud.google.com → APIs & Services → Credentials
-  private readonly GOOGLE_CLIENT_ID = '96736144451-0t99t4s70ka2quuuk3ov2ffatrto23i3.apps.googleusercontent.com';
+  private readonly GOOGLE_CLIENT_ID: string = '96736144451-0t99t4s70ka2quuuk3ov2ffatrto23i3.apps.googleusercontent.com';
 
   readonly currentUser = signal<User | null>(null);
   readonly token = signal<string | null>(null);
@@ -106,7 +106,7 @@ export class AuthService
       return;
     }
 
-    if (this.GOOGLE_CLIENT_ID === '96736144451-0t99t4s70ka2quuuk3ov2ffatrto23i3.apps.googleusercontent.com')
+    if (this.GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com')
     {
       // Demo mode fallback (no real Google Client ID configured)
       onError();
