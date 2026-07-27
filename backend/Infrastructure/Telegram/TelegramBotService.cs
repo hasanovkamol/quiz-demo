@@ -82,40 +82,46 @@ public class TelegramBotService
 
     private async Task SendWelcomeMessageAsync(long chatId, string name)
     {
-        var webAppUrl = Environment.GetEnvironmentVariable("TELEGRAM_WEBAPP_URL") ?? "http://localhost:8081";
+        var webAppUrl = Environment.GetEnvironmentVariable("TELEGRAM_WEBAPP_URL") ?? "";
 
-        var inlineKeyboard = new InlineKeyboardMarkup(new[]
+        var buttons = new List<List<InlineKeyboardButton>>();
+
+        // Telegram WebApp button requires valid HTTPS URL
+        if (!string.IsNullOrWhiteSpace(webAppUrl) && webAppUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            new[]
+            buttons.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithWebApp("📱 Mini App-ni Ochish", new WebAppInfo { Url = webAppUrl }),
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("⚡ ASP.NET Core", "cat:dotnet"),
-                InlineKeyboardButton.WithCallbackData("🗄️ EF Core", "cat:efcore"),
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("💾 Databases", "cat:database"),
-                InlineKeyboardButton.WithCallbackData("🅰️ Angular", "cat:angular"),
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("💻 C# & CLR", "cat:csharp"),
-                InlineKeyboardButton.WithCallbackData("🏛️ Architecture", "cat:architecture"),
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("📬 Messaging", "cat:messaging"),
-                InlineKeyboardButton.WithCallbackData("🐳 DevOps", "cat:devops"),
-            }
+                InlineKeyboardButton.WithWebApp("📱 Mini App-ni Ochish", new WebAppInfo { Url = webAppUrl })
+            });
+        }
+
+        buttons.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("⚡ ASP.NET Core", "cat:dotnet"),
+            InlineKeyboardButton.WithCallbackData("🗄️ EF Core", "cat:efcore"),
         });
+        buttons.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("💾 Databases", "cat:database"),
+            InlineKeyboardButton.WithCallbackData("🅰️ Angular", "cat:angular"),
+        });
+        buttons.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("💻 C# & CLR", "cat:csharp"),
+            InlineKeyboardButton.WithCallbackData("🏛️ Architecture", "cat:architecture"),
+        });
+        buttons.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("📬 Messaging", "cat:messaging"),
+            InlineKeyboardButton.WithCallbackData("🐳 DevOps", "cat:devops"),
+        });
+
+        var inlineKeyboard = new InlineKeyboardMarkup(buttons);
 
         string welcomeText = $"<b>Assalomu alaykum, {name}!</b> 🇺🇿\n\n" +
                              $"<b>QuizMaster PRO</b> botiga xush kelibsiz!\n" +
                              $"Ushbu bot orqali siz IT sohasidagi 720 ta senior darajadagi professional testlarni ishlashingiz mumkin.\n\n" +
-                             $"👇 <b>Kategoriyani tanlang yoki Mini App-ni oching:</b>";
+                             $"👇 <b>Kategoriyani tanlang:</b>";
 
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
