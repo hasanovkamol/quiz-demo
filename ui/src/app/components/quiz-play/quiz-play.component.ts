@@ -191,7 +191,11 @@ import { CodeEditorComponent } from '../code-editor/code-editor.component';
             <button 
               (click)="quizService.nextQuestion()"
               class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-600/30 transition hover:scale-105 active:scale-95">
-              {{ isLastQuestion() ? 'Natijani Ko\'rish' : 'Keyingisi' }}
+              @if (isLastQuestion()) {
+                <span>Natijani Ko'rish</span>
+              } @else {
+                <span>Keyingisi</span>
+              }
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
