@@ -103,10 +103,10 @@ export class AuthService
         this._pendingGoogleErrorCallback = onError;
         google.accounts.id.renderButton(containerElement, {
           type: 'standard',
-          theme: 'outline',
+          theme: 'filled_black',
           size: 'large',
-          text: 'signin_with',
-          shape: 'rectangular',
+          text: 'continue_with',
+          shape: 'pill',
           width: 320
         });
       } else {
