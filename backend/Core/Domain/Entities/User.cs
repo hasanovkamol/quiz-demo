@@ -6,6 +6,10 @@ public class User
 
     public string? GoogleId { get; set; }
 
+    public long? TelegramUserId { get; set; }
+
+    public string? TelegramUsername { get; set; }
+
     public required string Email { get; set; }
 
     public required string Name { get; set; }

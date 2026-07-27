@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Telegram.Bot;
 using QuizApi.Core.Application.Interfaces;
 using QuizApi.Core.Domain.Constants;
 using QuizApi.Endpoints;
 using QuizApi.Infrastructure.Ai;
 using QuizApi.Infrastructure.Identity;
 using QuizApi.Infrastructure.Persistence;
+using QuizApi.Infrastructure.Telegram;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +77,11 @@ builder.Services.AddAuthorization(options =>
     }
 });
 
+// Register Telegram Bot Client & Service
+var telegramBotToken = builder.Configuration["TelegramBot:Token"] ?? "1234567890:DEMO_TELEGRAM_BOT_TOKEN";
+builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(telegramBotToken));
+builder.Services.AddSingleton<TelegramBotService>();
+
 // Register Application & Infrastructure Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISemanticKernelQuizService, SemanticKernelQuizService>();
@@ -95,6 +102,7 @@ app.MapQuizEndpoints();
 app.MapAttemptEndpoints();
 app.MapAdminEndpoints();
 app.MapAuthEndpoints();
+app.MapTelegramEndpoints();
 
 // Auto initialize and seed DB
 using (var scope = app.Services.CreateScope())
