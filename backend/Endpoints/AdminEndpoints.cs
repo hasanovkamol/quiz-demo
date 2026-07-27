@@ -34,9 +34,25 @@ public static class AdminEndpoints
         })
         .WithSummary("Semantic Kernel AI yordamida avtomatik test savollari yaratish");
 
+        group.MapPost("/seed-720-questions", async (QuizDbContext dbContext) =>
+        {
+            await DbInitializer.SeedComprehensiveQuizzesAsync(dbContext);
+            var totalQuizzes = await dbContext.Quizzes.CountAsync();
+            var totalQuestions = await dbContext.Questions.CountAsync();
+
+            return TypedResults.Ok(new
+            {
+                message = "720 ta professional test savollari ma'lumotlar bazasiga muvaffaqiyatli kiritildi!",
+                totalQuizzes,
+                totalQuestions
+            });
+        })
+        .WithSummary("PDF va ekspert manbalari asosida 720 ta savolni bazaga qayta yuklash");
+
         group.MapGet("/stats", async (QuizDbContext dbContext) =>
         {
             var totalQuizzes = await dbContext.Quizzes.CountAsync();
+            var totalQuestions = await dbContext.Questions.CountAsync();
             var totalAttempts = await dbContext.QuizAttempts.CountAsync();
             var avgScore = totalAttempts > 0 ? await dbContext.QuizAttempts.AverageAsync(a => a.ScorePercentage) : 0;
             var uniqueUsersCount = await dbContext.QuizAttempts.Select(a => a.UserName).Distinct().CountAsync();
@@ -44,6 +60,7 @@ public static class AdminEndpoints
             return TypedResults.Ok(new
             {
                 totalQuizzes,
+                totalQuestions,
                 totalAttempts,
                 avgScore = Math.Round(avgScore, 1),
                 uniqueUsersCount
