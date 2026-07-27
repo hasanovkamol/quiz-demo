@@ -20,6 +20,29 @@ public static partial class ComprehensiveQuizSeeder
         return quizzes;
     }
 
+    private static Question CreateQuestion(string text, string? code, List<string> options, string explanation)
+    {
+        var question = new Question
+        {
+            Text = text,
+            CodeSnippet = code,
+            Explanation = explanation,
+            Options = new List<QuestionOption>()
+        };
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            question.Options.Add(new QuestionOption { Text = options[i] });
+        }
+
+        return question;
+    }
+
+    private static Question CreateQuestion(string text, List<string> options, string explanation)
+    {
+        return CreateQuestion(text, null, options, explanation);
+    }
+
     private static Quiz CreateQuiz(string title, string category, string categoryName, string description, string difficulty, string iconName, List<Question> questions)
     {
         var quizId = Guid.NewGuid();
@@ -37,7 +60,6 @@ public static partial class ComprehensiveQuizSeeder
             q.QuizId = quizId;
 
             var optionsList = new List<QuestionOption>();
-            int correctIdx = 0;
 
             for (int i = 0; i < q.Options.Count; i++)
             {
@@ -46,7 +68,7 @@ public static partial class ComprehensiveQuizSeeder
                 opt.Id = optId;
                 opt.QuestionId = q.Id;
 
-                if (i == 0) // Default first option is correct unless specified
+                if (i == 0) // First option is the correct option in our seeder dataset
                 {
                     q.CorrectOptionId = optId.ToString();
                 }
