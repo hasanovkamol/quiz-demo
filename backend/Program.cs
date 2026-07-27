@@ -88,6 +88,7 @@ if (builder.Environment.EnvironmentName != "Testing")
 }
 
 // Register Application & Infrastructure Services
+builder.Services.AddHttpClient<IKeycloakService, KeycloakService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISemanticKernelQuizService, SemanticKernelQuizService>();
 

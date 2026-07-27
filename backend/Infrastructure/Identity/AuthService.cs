@@ -12,7 +12,11 @@ using QuizApi.Infrastructure.Persistence;
 
 namespace QuizApi.Infrastructure.Identity;
 
-public class AuthService(QuizDbContext dbContext, IConfiguration configuration, ILogger<AuthService> logger) : IAuthService
+public class AuthService(
+    QuizDbContext dbContext, 
+    IConfiguration configuration, 
+    ILogger<AuthService> logger,
+    IKeycloakService keycloakService) : IAuthService
 {
     private const int ACCESS_TOKEN_EXPIRATION_SECONDS = 300;
 
@@ -55,7 +59,7 @@ public class AuthService(QuizDbContext dbContext, IConfiguration configuration, 
                 Email = email,
                 Name = name,
                 PictureUrl = pictureUrl,
-                Role = email.Contains("admin") ? "Admin" : "User",
+                Role =  "User",
                 CreatedAt = DateTime.UtcNow,
                 LastLoginAt = DateTime.UtcNow
             };
@@ -69,6 +73,9 @@ public class AuthService(QuizDbContext dbContext, IConfiguration configuration, 
         }
 
         await dbContext.SaveChangesAsync();
+
+        // Sync User to Keycloak Realm asynchronously
+        _ = Task.Run(() => keycloakService.SyncUserToKeycloakAsync(user.Email, user.Name, user.Role));
 
         var permissions = Permissions.GetPermissionsForRole(user.Role);
         var jwtToken = GenerateJwtToken(user, permissions, ACCESS_TOKEN_EXPIRATION_SECONDS);
