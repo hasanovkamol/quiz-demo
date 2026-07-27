@@ -26,13 +26,13 @@ public class QuizDbContext : DbContext
 
         modelBuilder.Entity<Question>()
             .HasMany(q => q.Options)
-            .WithOne()
+            .WithOne(o => o.Question)
             .HasForeignKey(o => o.QuestionId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<QuizAttempt>()
             .HasMany(a => a.UserAnswers)
-            .WithOne()
+            .WithOne(u => u.Attempt)
             .HasForeignKey(u => u.AttemptId)
             .OnDelete(DeleteBehavior.Cascade);
 
