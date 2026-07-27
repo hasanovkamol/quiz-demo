@@ -15,6 +15,11 @@ public static class DbInitializer
                 if (context.Database.IsNpgsql())
                 {
                     await context.Database.MigrateAsync();
+
+                    // Safely ensure Telegram columns exist on production Users table
+                    await context.Database.ExecuteSqlRawAsync(
+                        "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
+                        "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
                 }
                 else
                 {
@@ -38,7 +43,6 @@ public static class DbInitializer
 
     public static async Task SeedComprehensiveQuizzesAsync(QuizDbContext context)
     {
-        // Clear existing partial sample quizzes to ensure clean 720 question dataset
         var existingQuizzes = await context.Quizzes.ToListAsync();
         if (existingQuizzes.Any())
         {

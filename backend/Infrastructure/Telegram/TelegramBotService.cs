@@ -250,7 +250,6 @@ public class TelegramBotService
             return;
         }
 
-        // Take 5 random questions for a quick interactive session
         var random = new Random();
         var selectedQuestions = quiz.Questions.OrderBy(_ => random.Next()).Take(5).ToList();
 
@@ -285,12 +284,16 @@ public class TelegramBotService
         }
 
         var question = session.Questions[session.CurrentIndex];
-        var optionsTexts = question.Options.Select(o => o.Text).ToList();
-        int correctIndex = 0;
 
+        // Telegram native poll options MUST NOT exceed 100 chars
+        var optionsTexts = question.Options
+            .Select(o => o.Text.Length > 98 ? o.Text.Substring(0, 95) + "..." : o.Text)
+            .ToList();
+
+        int correctIndex = 0;
         for (int i = 0; i < question.Options.Count; i++)
         {
-            if (question.Options[i].Id.ToString() == question.CorrectOptionId || i == 0)
+            if (question.Options[i].Id.ToString() == question.CorrectOptionId)
             {
                 correctIndex = i;
                 break;
@@ -340,7 +343,6 @@ public class TelegramBotService
         {
             if (_activeSessions.TryGetValue(userId, out var session))
             {
-                // Check if user chose correct option
                 if (pollAnswer.OptionIds.Contains(pollInfo.CorrectOptionId))
                 {
                     session.CorrectAnswersCount++;
@@ -348,10 +350,7 @@ public class TelegramBotService
 
                 session.CurrentIndex++;
 
-                // Wait 1.5 seconds so user can see poll green/red animation
                 await Task.Delay(1500);
-
-                // Send next poll or finish
                 await SendNextPollInSessionAsync(session);
             }
         }
@@ -391,7 +390,6 @@ public class TelegramBotService
         var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == session.UserId);
         string userName = dbUser?.Name ?? "Telegram Dasturchi";
 
-        // Save Attempt to Database
         var quiz = await dbContext.Quizzes.FirstOrDefaultAsync(q => q.Category == session.Category && q.Difficulty == session.Difficulty);
         if (quiz != null)
         {
