@@ -51,12 +51,18 @@ export class KeycloakService {
     });
 
     try {
+      // Angular <base href> dan to'g'ri base URL ni olamiz
+      // GitHub Pages: https://hasanovkamol.github.io/quiz-demo/
+      // Local:        http://localhost:4200/
+      const baseHref = (document.querySelector('base') as HTMLBaseElement)?.href
+        ?? (window.location.origin + '/');
+
       const authenticated = await this.kc.init({
         onLoad: 'check-sso',
-        silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+        silentCheckSsoRedirectUri: baseHref + 'silent-check-sso.html',
         pkceMethod: 'S256',
         checkLoginIframe: false,
-        redirectUri: redirectUri ?? window.location.href,
+        redirectUri: redirectUri ?? baseHref,
       });
 
       this.isAuthenticated.set(authenticated);
@@ -76,7 +82,9 @@ export class KeycloakService {
 
   /** Keycloak login sahifasiga redirect qiladi */
   login(redirectUri?: string): void {
-    this.kc?.login({ redirectUri: redirectUri ?? window.location.href });
+    const baseHref = (document.querySelector('base') as HTMLBaseElement)?.href
+      ?? (window.location.origin + '/');
+    this.kc?.login({ redirectUri: redirectUri ?? baseHref });
   }
 
   /** Keycloak logout — session o'chiriladi */
