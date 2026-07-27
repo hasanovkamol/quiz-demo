@@ -1,18 +1,26 @@
-# Docker Compose & Nginx Gateway Setup
+# Multi-Container Docker Compose Setup & Nginx Gateway
 
-Detailed guide for multi-container orchestration.
+Documentation of container topology and port mapping configuration.
 
 ---
 
-## 🐳 Docker Services (`docker-compose.yml`)
+## 🐳 Container Port Mapping Topology
 
-1. `quiz_postgres_db`: PostgreSQL 16 database engine.
-2. `quiz_keycloak`: Keycloak IAM 24.0 OpenID Connect on port 8080.
-3. `quiz_aspnet_backend`: ASP.NET Core 9 Web API on port 5000.
-4. `quiz_angular_ui`: Angular 18+ Single Page Application.
-5. `quiz_nginx_gateway`: Nginx API Gateway exposing port 80.
+| Service | Container Name | Host Port | Internal Container Port | Description |
+|---|---|---|---|---|
+| **gateway** | `quiz_nginx_gateway` | **`80`** | `80` | Main Reverse Proxy Entrypoint (`http://localhost`) |
+| **ui** | `quiz_angular_ui` | **`4200`** | `80` | Angular 18+ Direct SPA Access (`http://localhost:4200`) |
+| **backend** | `quiz_aspnet_backend` | **`5000`** | `5000` | ASP.NET Core 10 Web API (`http://localhost:5000`) |
+| **keycloak** | `quiz_keycloak` | **`8080`** | `8080` | Keycloak Identity Realm (`http://localhost:8080`) |
+| **infisical** | `quiz_infisical_secrets` | **`8000`** | `8000` | Infisical Secret Manager (`http://localhost:8000`) |
+| **db** | `quiz_postgres_db` | **`5432`** | `5432` | PostgreSQL Database Container |
 
-### Execution Command
+---
+
+## 🚀 Execution & Port Access
+
 ```bash
-docker compose up --build -d
+docker compose up -d
 ```
+- Direct Angular UI: `http://localhost:4200`
+- Full Gateway Entrypoint: `http://localhost`
