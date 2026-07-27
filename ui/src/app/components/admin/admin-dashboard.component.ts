@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QuizApiService } from '../../services/quiz-api.service';
 import { QuizService } from '../../services/quiz.service';
+import { AuthService } from '../../services/auth.service';
 import { QuizAttempt } from '../../models/quiz.model';
 
 @Component({
@@ -12,6 +13,25 @@ import { QuizAttempt } from '../../models/quiz.model';
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
+      @if (!authService.isAdmin()) {
+        <div class="max-w-xl mx-auto my-16 p-8 glass-card rounded-3xl border border-rose-500/30 text-center relative overflow-hidden shadow-2xl">
+          <div class="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-rose-500/10">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-black text-white mb-2">Ruxsat Cheklangan (403 Forbidden)</h2>
+          <p class="text-xs text-slate-400 mb-6 leading-relaxed">
+            Admin Console faqat Keycloak yoki Tizimda <b>Admin</b> roliga ega bo'lgan foydalanuvchilar uchun ochiq. Iltimos Admin hisobi bilan tizimga kiring.
+          </p>
+          <button 
+            (click)="quizService.isNameModalOpen.set(true)"
+            class="px-6 py-3 rounded-2xl text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-600/30 transition">
+            🔑 Tizimga Kirish / Autentifikatsiya
+          </button>
+        </div>
+      } @else {
+
       <!-- Admin Header -->
       <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-800 flex-wrap gap-4">
         <div>
@@ -225,6 +245,7 @@ import { QuizAttempt } from '../../models/quiz.model';
 
         </div>
       }
+      }
 
     </div>
   `
@@ -232,6 +253,7 @@ import { QuizAttempt } from '../../models/quiz.model';
 export class AdminDashboardComponent implements OnInit {
   private readonly apiService = inject(QuizApiService);
   readonly quizService = inject(QuizService);
+  readonly authService = inject(AuthService);
 
   readonly openCreator = output<void>();
 

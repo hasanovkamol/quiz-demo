@@ -45,13 +45,15 @@ import { AuthService } from '../../services/auth.service';
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition'">
               <span>🎓</span> User Mode
             </button>
-            <button 
-              (click)="switchPortal.emit('admin')"
-              [class]="activePortal() === 'admin' ? 
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-white bg-purple-600 shadow-md shadow-purple-600/30 transition' : 
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition'">
-              <span>⚙️</span> Admin Console
-            </button>
+            @if (authService.isAdmin()) {
+              <button 
+                (click)="switchPortal.emit('admin')"
+                [class]="activePortal() === 'admin' ? 
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-white bg-purple-600 shadow-md shadow-purple-600/30 transition' : 
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition'">
+                <span>⚙️</span> Admin Console
+              </button>
+            }
           </div>
 
           <!-- USER PORTAL ACTIONS -->
@@ -139,22 +141,24 @@ import { AuthService } from '../../services/auth.service';
         <div class="md:hidden border-t border-slate-800/80 bg-slate-950/95 px-4 pt-3 pb-5 space-y-3 backdrop-blur-xl animate-fadeIn">
           
           <!-- Mode Switcher in Mobile -->
-          <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs mb-2">
-            <button 
-              (click)="switchPortal.emit('user'); isMobileMenuOpen.set(false)"
-              [class]="activePortal() === 'user' ? 
-                'flex items-center justify-center gap-1.5 py-2 rounded-lg font-bold text-white bg-indigo-600 shadow-md' : 
-                'flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-slate-400'">
-              <span>🎓</span> User Mode
-            </button>
-            <button 
-              (click)="switchPortal.emit('admin'); isMobileMenuOpen.set(false)"
-              [class]="activePortal() === 'admin' ? 
-                'flex items-center justify-center gap-1.5 py-2 rounded-lg font-bold text-white bg-purple-600 shadow-md' : 
-                'flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-slate-400'">
-              <span>⚙️</span> Admin Console
-            </button>
-          </div>
+          @if (authService.isAdmin()) {
+            <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs mb-2">
+              <button 
+                (click)="switchPortal.emit('user'); isMobileMenuOpen.set(false)"
+                [class]="activePortal() === 'user' ? 
+                  'flex items-center justify-center gap-1.5 py-2 rounded-lg font-bold text-white bg-indigo-600 shadow-md' : 
+                  'flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-slate-400'">
+                <span>🎓</span> User Mode
+              </button>
+              <button 
+                (click)="switchPortal.emit('admin'); isMobileMenuOpen.set(false)"
+                [class]="activePortal() === 'admin' ? 
+                  'flex items-center justify-center gap-1.5 py-2 rounded-lg font-bold text-white bg-purple-600 shadow-md' : 
+                  'flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-slate-400'">
+                <span>⚙️</span> Admin Console
+              </button>
+            </div>
+          }
 
           @if (activePortal() === 'user' && quizService.quizHistory().length > 0) {
             <button 

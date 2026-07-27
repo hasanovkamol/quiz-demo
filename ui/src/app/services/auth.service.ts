@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { User, AuthResponse } from '../models/user.model';
@@ -39,6 +39,14 @@ export class AuthService
   readonly token = signal<string | null>(null);
   readonly refreshToken = signal<string | null>(null);
   readonly isGoogleReady = signal<boolean>(false);
+
+  readonly isAdmin = computed(() => {
+    const user = this.currentUser();
+    if (!user) return false;
+    const role = (user.role || '').toLowerCase();
+    if (role === 'admin') return true;
+    return user.permissions?.includes('admin:stats') || user.permissions?.includes('users:manage') || false;
+  });
 
   private refreshTimer: any = null;
 

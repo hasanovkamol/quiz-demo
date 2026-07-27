@@ -10,6 +10,8 @@ import { HistoryModalComponent } from './components/history-modal/history-modal.
 import { UserModalComponent } from './components/user-modal/user-modal.component';
 import { AdminDashboardComponent } from './components/admin/admin-dashboard.component';
 
+import { AuthService } from './services/auth.service';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -29,12 +31,17 @@ import { AdminDashboardComponent } from './components/admin/admin-dashboard.comp
 })
 export class App {
   readonly quizService = inject(QuizService);
+  readonly authService = inject(AuthService);
 
   readonly activePortal = signal<'user' | 'admin'>('user');
   readonly isCreatorOpen = signal<boolean>(false);
   readonly isHistoryOpen = signal<boolean>(false);
 
   setPortal(mode: 'user' | 'admin'): void {
+    if (mode === 'admin' && !this.authService.isAdmin()) {
+      this.quizService.isNameModalOpen.set(true);
+      return;
+    }
     this.activePortal.set(mode);
   }
 }
