@@ -103,7 +103,7 @@ services:
       dockerfile: Dockerfile
     container_name: quiz_angular_ui
     ports:
-      - "4200:80"
+      - "8081:80"
     networks:
       - quiz-net
     depends_on:
