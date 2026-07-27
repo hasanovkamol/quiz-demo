@@ -31,6 +31,7 @@ Welcome to the official modular documentation for the **QuizMaster PRO** Full-St
 ---
 
 ### 4. 🐳 Infrastructure & Operations (`./docs/deployment/`)
+- 📄 **[deployment/infisical-config-management.md](./deployment/infisical-config-management.md)**: Infisical Centralized Secret & Configuration Management Guide
 - 📄 **[deployment/ci-cd-pipeline.md](./deployment/ci-cd-pipeline.md)**: GitHub Actions Automated CI/CD Workflow
 - 📄 **[deployment/docker-and-gateway.md](./deployment/docker-and-gateway.md)**: Multi-Container Docker Compose Setup
 - 📄 **[deployment/quiz-net-topology.md](./deployment/quiz-net-topology.md)**: `quiz-net` Isolated Bridge Network Topology

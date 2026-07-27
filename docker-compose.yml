@@ -36,6 +36,48 @@ services:
     depends_on:
       - db
 
+  infisical-db:
+    image: postgres:16-alpine
+    container_name: infisical_postgres_db
+    environment:
+      POSTGRES_DB: infisical_db
+      POSTGRES_USER: infisical
+      POSTGRES_PASSWORD: infisical_password
+    networks:
+      - quiz-net
+    volumes:
+      - infisical_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infisical -d infisical_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  infisical-redis:
+    image: redis:7-alpine
+    container_name: infisical_redis_cache
+    networks:
+      - quiz-net
+
+  infisical:
+    image: infisical/infisical:latest
+    container_name: quiz_infisical_secrets
+    environment:
+      - DB_CONNECTION_URI=postgres://infisical:infisical_password@infisical-db:5432/infisical_db
+      - REDIS_URL=redis://infisical-redis:6379
+      - ENCRYPTION_KEY=6c8d488e0b2302bbd03e95bc7ee8109d
+      - AUTH_SECRET=35c6f62b0e2bfb7cdcd26e84d41fdf7d
+      - SITE_URL=http://localhost:8000
+    ports:
+      - "8000:8000"
+    networks:
+      - quiz-net
+    depends_on:
+      infisical-db:
+        condition: service_healthy
+      infisical-redis:
+        condition: service_started
+
   backend:
     build:
       context: ./backend
@@ -44,6 +86,7 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=quizdb;Username=postgres;Password=postgres
       - Keycloak__Authority=http://keycloak:8080/realms/quizmaster-realm
+      - INFISICAL_API_URL=http://infisical:8000
     ports:
       - "5000:5000"
     networks:
@@ -51,6 +94,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      infisical:
+        condition: service_started
 
   ui:
     build:
@@ -75,6 +120,7 @@ services:
       - ui
       - backend
       - keycloak
+      - infisical
 
 networks:
   quiz-net:
@@ -82,3 +128,4 @@ networks:
 
 volumes:
   pgdata:
+  infisical_pgdata:
