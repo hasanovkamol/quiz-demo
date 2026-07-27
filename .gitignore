@@ -1,0 +1,22 @@
+# .NET / C#
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+.vscode/
+
+# Node.js & Angular
+node_modules/
+.angular/
+dist/
+coverage/
+.npm/
+
+# OS / Temporary
+.DS_Store
+Thumbs.db
+tmp/
+*.log

@@ -1,0 +1,12 @@
+{
+  "name": "quizmaster-pro-root",
+  "version": "1.0.0",
+  "description": "Full-Stack QuizMaster PRO Assessment System",
+  "scripts": {
+    "test": "npm --prefix ui run test && cd backend.tests && dotnet test",
+    "test:ui": "npm --prefix ui run test",
+    "test:backend": "cd backend.tests && dotnet test",
+    "build:ui": "npm --prefix ui run build",
+    "build:backend": "cd backend && dotnet build"
+  }
+}

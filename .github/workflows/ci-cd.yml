@@ -1,0 +1,72 @@
+name: QuizMaster PRO CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-ci:
+    name: Backend Build & Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 9.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore Backend Dependencies
+        run: dotnet restore backend/QuizApi.csproj
+
+      - name: Build ASP.NET Core Backend API
+        run: dotnet build backend/QuizApi.csproj --no-restore -c Release
+
+      - name: Run Backend Integration Tests
+        run: dotnet test backend.tests/QuizApi.Tests.csproj -c Release --verbosity normal
+
+  frontend-ci:
+    name: Angular UI Build & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install UI Dependencies
+        run: npm --prefix ui install --legacy-peer-deps
+
+      - name: Run Angular UI Unit Tests
+        run: npm --prefix ui run test
+
+      - name: Build Angular Production Bundle
+        run: npm --prefix ui run build
+
+  docker-verification:
+    name: Docker Compose Infrastructure Validation
+    needs: [backend-ci, frontend-ci]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker Compose Configuration
+        run: docker compose config
+
+      - name: Build Multi-Container Services
+        run: docker compose build

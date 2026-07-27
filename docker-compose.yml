@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: quiz_postgres_db
+    environment:
+      POSTGRES_DB: quizdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - quiz-net
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: quiz_keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    networks:
+      - quiz-net
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    depends_on:
+      - db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: quiz_aspnet_backend
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=quizdb;Username=postgres;Password=postgres
+      - Keycloak__Authority=http://keycloak:8080/realms/quizmaster-realm
+    ports:
+      - "5000:5000"
+    networks:
+      - quiz-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: quiz_angular_ui
+    networks:
+      - quiz-net
+    depends_on:
+      - backend
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: quiz_nginx_gateway
+    ports:
+      - "80:80"
+    networks:
+      - quiz-net
+    depends_on:
+      - ui
+      - backend
+      - keycloak
+
+networks:
+  quiz-net:
+    driver: bridge
+
+volumes:
+  pgdata:

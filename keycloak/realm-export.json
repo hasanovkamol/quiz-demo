@@ -1,0 +1,101 @@
+{
+  "id": "quizmaster-realm",
+  "realm": "quizmaster-realm",
+  "enabled": true,
+  "displayName": "QuizMaster PRO Realm",
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "quizzes:read",
+        "description": "Permission to view quizzes"
+      },
+      {
+        "name": "quizzes:create",
+        "description": "Permission to create custom quizzes"
+      },
+      {
+        "name": "quizzes:delete",
+        "description": "Permission to delete quizzes"
+      },
+      {
+        "name": "attempts:read",
+        "description": "Permission to view quiz attempt scorecards"
+      },
+      {
+        "name": "attempts:submit",
+        "description": "Permission to submit quiz attempts"
+      },
+      {
+        "name": "ai:generate",
+        "description": "Permission to generate AI quizzes"
+      },
+      {
+        "name": "admin:stats",
+        "description": "Permission to view admin dashboard statistics"
+      },
+      {
+        "name": "users:manage",
+        "description": "Permission to manage users and roles"
+      },
+      {
+        "name": "Admin",
+        "description": "Full Administrator Composite Role",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "quizzes:read",
+            "quizzes:create",
+            "quizzes:delete",
+            "attempts:read",
+            "attempts:submit",
+            "ai:generate",
+            "admin:stats",
+            "users:manage"
+          ]
+        }
+      },
+      {
+        "name": "User",
+        "description": "Standard User Composite Role",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "quizzes:read",
+            "quizzes:create",
+            "attempts:submit",
+            "attempts:read"
+          ]
+        }
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "quizmaster-app",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm-roles-to-permission-claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "permission",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ]
+}

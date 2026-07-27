@@ -1,0 +1,207 @@
+import { Component, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { QuizService } from '../../services/quiz.service';
+
+@Component({
+  selector: 'app-quiz-play',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    @if (quizService.currentQuiz(); as quiz) {
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        
+        <!-- Header Bar -->
+        <div class="glass-card rounded-2xl p-4 sm:p-6 mb-6 border border-slate-800 flex items-center justify-between gap-4 flex-wrap">
+          
+          <div class="flex items-center gap-3">
+            <button 
+              (click)="showConfirmExit.set(true)"
+              title="Chiqish"
+              class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  {{ quiz.categoryName }}
+                </span>
+                <span class="text-xs text-slate-400 font-medium">Savol {{ quizService.currentQuestionIndex() + 1 }} / {{ quiz.questions.length }}</span>
+              </div>
+              <h2 class="text-lg font-bold text-white line-clamp-1 mt-0.5">
+                {{ quiz.title }}
+              </h2>
+            </div>
+          </div>
+
+          <!-- Timer Badge -->
+          <div 
+            [class]="quizService.timerSecondsLeft() < 60 ? 
+              'flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono font-bold text-sm animate-pulse' : 
+              'flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-indigo-400 font-mono font-bold text-sm'">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {{ quizService.formattedTimer() }}
+          </div>
+
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden mb-8 border border-slate-800/60">
+          <div 
+            class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 ease-out"
+            [style.width.%]="quizService.progressPercentage()">
+          </div>
+        </div>
+
+        <!-- Question Navigation Dots / Numbers -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-3 mb-6 scrollbar-none">
+          @for (q of quiz.questions; track q.id; let i = $index) {
+            <button 
+              (click)="quizService.currentQuestionIndex.set(i)"
+              [class]="i === quizService.currentQuestionIndex() ? 
+                'w-9 h-9 rounded-xl font-bold text-xs bg-indigo-600 text-white border border-indigo-400 shadow-md shadow-indigo-600/30 flex items-center justify-center shrink-0' : 
+                (quizService.userAnswers().has(q.id) ? 
+                  'w-9 h-9 rounded-xl font-semibold text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center shrink-0' : 
+                  'w-9 h-9 rounded-xl font-semibold text-xs bg-slate-900 text-slate-400 border border-slate-800 hover:bg-slate-800 flex items-center justify-center shrink-0')">
+              {{ i + 1 }}
+            </button>
+          }
+        </div>
+
+        <!-- Question Card -->
+        @if (quizService.currentQuestion(); as question) {
+          <div class="glass-card rounded-2xl p-6 sm:p-8 mb-8 border border-slate-800">
+            
+            <!-- Question text -->
+            <div class="mb-6">
+              <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-2 block">
+                Savol #{{ quizService.currentQuestionIndex() + 1 }}
+              </span>
+              <h3 class="text-xl sm:text-2xl font-bold text-white leading-snug">
+                {{ question.text }}
+              </h3>
+            </div>
+
+            <!-- Optional Code Snippet Block -->
+            @if (question.codeSnippet) {
+              <div class="mb-8 rounded-xl bg-slate-950 border border-slate-800 p-4 sm:p-5 font-mono text-xs sm:text-sm text-indigo-200 overflow-x-auto relative group">
+                <div class="absolute top-2 right-2 text-[10px] uppercase font-bold text-slate-500 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Code</div>
+                <pre class="whitespace-pre-wrap leading-relaxed"><code>{{ question.codeSnippet }}</code></pre>
+              </div>
+            }
+
+            <!-- Options Grid -->
+            <div class="space-y-3.5">
+              @for (option of question.options; track option.id; let optIdx = $index) {
+                <div 
+                  (click)="quizService.selectOption(option.id)"
+                  [class]="quizService.currentSelectedOptionId() === option.id ? 
+                    'p-4 rounded-xl border-2 border-indigo-500 bg-indigo-500/10 text-white flex items-start gap-4 cursor-pointer transition-all shadow-md shadow-indigo-500/10' : 
+                    'p-4 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-700 text-slate-300 flex items-start gap-4 cursor-pointer transition-all'">
+                  
+                  <!-- Option Letter / Checkbox Circle -->
+                  <div 
+                    [class]="quizService.currentSelectedOptionId() === option.id ? 
+                      'w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-sm' : 
+                      'w-7 h-7 rounded-lg bg-slate-800 text-slate-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-slate-700'">
+                    {{ getOptionLetter(optIdx) }}
+                  </div>
+
+                  <!-- Option Text -->
+                  <div class="text-sm font-medium leading-relaxed pt-0.5 flex-1">
+                    {{ option.text }}
+                  </div>
+
+                  <!-- Selected Check icon -->
+                  @if (quizService.currentSelectedOptionId() === option.id) {
+                    <div class="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center shrink-0 mt-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+          </div>
+        }
+
+        <!-- Bottom Controls -->
+        <div class="flex items-center justify-between gap-4">
+          <button 
+            (click)="quizService.previousQuestion()"
+            [disabled]="quizService.currentQuestionIndex() === 0"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-300 bg-slate-900 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Oldingisi
+          </button>
+
+          <div class="flex items-center gap-3">
+            <button 
+              (click)="quizService.finishQuiz()"
+              class="px-4 py-2.5 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition">
+              Testni yakunlash
+            </button>
+
+            <button 
+              (click)="quizService.nextQuestion()"
+              class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-600/30 transition hover:scale-105 active:scale-95">
+              {{ isLastQuestion() ? 'Natijani Ko\'rish' : 'Keyingisi' }}
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Confirm Exit Modal -->
+        @if (showConfirmExit()) {
+          <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-slate-800 text-center">
+              <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-2">Testdan chiqmoqchimisiz?</h3>
+              <p class="text-xs text-slate-400 mb-6">Test holati saqlanmaydi va erishilgan natijangiz bekor qilinadi.</p>
+              <div class="flex items-center justify-center gap-3">
+                <button 
+                  (click)="showConfirmExit.set(false)"
+                  class="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800 hover:bg-slate-800 transition">
+                  Davom etish
+                </button>
+                <button 
+                  (click)="quizService.resetQuiz(); showConfirmExit.set(false)"
+                  class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition">
+                  Ha, chiqish
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+      </div>
+    }
+  `
+})
+export class QuizPlayComponent {
+  readonly quizService = inject(QuizService);
+  readonly showConfirmExit = signal<boolean>(false);
+
+  getOptionLetter(index: number): string {
+    return String.fromCharCode(65 + index); // A, B, C, D
+  }
+
+  isLastQuestion(): boolean {
+    const quiz = this.quizService.currentQuiz();
+    if (!quiz) return false;
+    return this.quizService.currentQuestionIndex() === quiz.questions.length - 1;
+  }
+}

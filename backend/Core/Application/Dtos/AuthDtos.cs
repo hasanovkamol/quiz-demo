@@ -1,0 +1,33 @@
+namespace QuizApi.Core.Application.Dtos;
+
+public record GoogleLoginRequestDto(
+    string IdToken,
+    string? FallbackName,
+    string? FallbackEmail
+);
+
+public record RefreshTokenRequestDto(
+    string RefreshToken,
+    string? UserId
+);
+
+public record AuthResponseDto(
+    string Token,
+    string RefreshToken,
+    int ExpiresInSeconds,
+    Guid UserId,
+    string Email,
+    string Name,
+    string? PictureUrl,
+    string Role,
+    IReadOnlyList<string> Permissions
+);
+
+public record AiQuizGenerationRequest(
+    string Topic,
+    string Category,
+    string Difficulty,
+    int QuestionCount,
+    int TimeLimitMinutes,
+    string? ApiKey
+);
