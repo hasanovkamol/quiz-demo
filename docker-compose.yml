@@ -85,6 +85,10 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=quizdb;Username=postgres;Password=postgres
       - Keycloak__Authority=http://keycloak:8080/realms/quizmaster-realm
+      - Keycloak__AdminUrl=http://keycloak:8080
+      - Keycloak__Realm=quizmaster-realm
+      - Keycloak__AdminUsername=admin
+      - Keycloak__AdminPassword=admin
       - INFISICAL_API_URL=http://infisical:8080
       - Gemini__ApiKey=${GEMINI_API_KEY}
       - TelegramBot__Token=${TELEGRAM_BOT_TOKEN}
