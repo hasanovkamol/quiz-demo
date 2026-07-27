@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -16,6 +17,12 @@ public class TelegramBotService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TelegramBotService> _logger;
 
+    // Track active quiz sessions per user
+    private static readonly ConcurrentDictionary<long, ActiveQuizSession> _activeSessions = new();
+    
+    // Track poll IDs to their session and correct answer index
+    private static readonly ConcurrentDictionary<string, PollInfo> _activePolls = new();
+
     public TelegramBotService(
         ITelegramBotClient botClient,
         IServiceProvider serviceProvider,
@@ -24,6 +31,23 @@ public class TelegramBotService
         _botClient = botClient;
         _serviceProvider = serviceProvider;
         _logger = logger;
+    }
+
+    public class ActiveQuizSession
+    {
+        public long UserId { get; set; }
+        public long ChatId { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public string Difficulty { get; set; } = string.Empty;
+        public List<Question> Questions { get; set; } = new();
+        public int CurrentIndex { get; set; } = 0;
+        public int CorrectAnswersCount { get; set; } = 0;
+    }
+
+    public class PollInfo
+    {
+        public long UserId { get; set; }
+        public int CorrectOptionId { get; set; }
     }
 
     public async Task HandleUpdateAsync(Update update)
@@ -74,7 +98,7 @@ public class TelegramBotService
         {
             await _botClient.SendTextMessageAsync(
                 chatId: chatId,
-                text: "📌 Buyruqlar ro'yxati:\n\n/quiz — Test ishlashni boshlash\n/stats — Shaxsiy statistikangiz\n/leaderboard — Top dasturchilar reytingi",
+                text: "📌 **Buyruqlar ro'yxati:**\n\n/quiz — Test ishlashni boshlash (Ketma-ket savollar)\n/stats — Shaxsiy statistikangiz\n/leaderboard — Top dasturchilar reytingi",
                 parseMode: ParseMode.Markdown
             );
         }
@@ -86,7 +110,6 @@ public class TelegramBotService
 
         var buttons = new List<List<InlineKeyboardButton>>();
 
-        // Telegram WebApp button requires valid HTTPS URL
         if (!string.IsNullOrWhiteSpace(webAppUrl) && webAppUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             buttons.Add(new List<InlineKeyboardButton>
@@ -120,7 +143,7 @@ public class TelegramBotService
 
         string welcomeText = $"<b>Assalomu alaykum, {name}!</b> 🇺🇿\n\n" +
                              $"<b>QuizMaster PRO</b> botiga xush kelibsiz!\n" +
-                             $"Ushbu bot orqali siz IT sohasidagi 720 ta senior darajadagi professional testlarni ishlashingiz mumkin.\n\n" +
+                             $"Ushbu bot orqali siz IT sohasidagi 720 ta senior darajadagi professional testlarni ketma-ket topshirishingiz mumkin.\n\n" +
                              $"👇 <b>Kategoriyani tanlang:</b>";
 
         await _botClient.SendTextMessageAsync(
@@ -170,6 +193,7 @@ public class TelegramBotService
         if (callbackQuery.Message == null || string.IsNullOrEmpty(callbackQuery.Data)) return;
 
         var chatId = callbackQuery.Message.Chat.Id;
+        var userId = callbackQuery.From.Id;
         var data = callbackQuery.Data;
 
         if (data.StartsWith("cat:"))
@@ -202,14 +226,14 @@ public class TelegramBotService
             {
                 var category = parts[1];
                 var difficulty = parts[2];
-                await SendRandomQuizPollAsync(chatId, category, difficulty);
+                await StartSequentialQuizSessionAsync(userId, chatId, category, difficulty);
             }
         }
 
         await _botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
     }
 
-    private async Task SendRandomQuizPollAsync(long chatId, string category, string difficulty)
+    private async Task StartSequentialQuizSessionAsync(long userId, long chatId, string category, string difficulty)
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
@@ -226,9 +250,41 @@ public class TelegramBotService
             return;
         }
 
+        // Take 5 random questions for a quick interactive session
         var random = new Random();
-        var question = quiz.Questions[random.Next(quiz.Questions.Count)];
+        var selectedQuestions = quiz.Questions.OrderBy(_ => random.Next()).Take(5).ToList();
 
+        var session = new ActiveQuizSession
+        {
+            UserId = userId,
+            ChatId = chatId,
+            Category = category,
+            Difficulty = difficulty,
+            Questions = selectedQuestions,
+            CurrentIndex = 0,
+            CorrectAnswersCount = 0
+        };
+
+        _activeSessions[userId] = session;
+
+        await _botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: $"🚀 **{category.ToUpper()} ({difficulty})** bo'yicha 5 ta ketma-ket savoldan iborat test boshlandi!\n\nBirinchi savol yuborilmoqda...",
+            parseMode: ParseMode.Markdown
+        );
+
+        await SendNextPollInSessionAsync(session);
+    }
+
+    private async Task SendNextPollInSessionAsync(ActiveQuizSession session)
+    {
+        if (session.CurrentIndex >= session.Questions.Count)
+        {
+            await FinishQuizSessionAsync(session);
+            return;
+        }
+
+        var question = session.Questions[session.CurrentIndex];
         var optionsTexts = question.Options.Select(o => o.Text).ToList();
         int correctIndex = 0;
 
@@ -241,27 +297,64 @@ public class TelegramBotService
             }
         }
 
-        // Telegram limit for explanation is 200 chars
         string explanation = question.Explanation;
         if (explanation.Length > 195)
         {
             explanation = explanation.Substring(0, 192) + "...";
         }
 
-        await _botClient.SendPollAsync(
-            chatId: chatId,
-            question: question.Text.Length > 300 ? question.Text.Substring(0, 295) + "..." : question.Text,
+        string questionTitle = $"[{session.CurrentIndex + 1}/{session.Questions.Count}] {question.Text}";
+        if (questionTitle.Length > 300)
+        {
+            questionTitle = questionTitle.Substring(0, 295) + "...";
+        }
+
+        var message = await _botClient.SendPollAsync(
+            chatId: session.ChatId,
+            question: questionTitle,
             options: optionsTexts,
             type: PollType.Quiz,
             correctOptionId: correctIndex,
             explanation: explanation,
             isAnonymous: false
         );
+
+        if (message.Poll != null)
+        {
+            _activePolls[message.Poll.Id] = new PollInfo
+            {
+                UserId = session.UserId,
+                CorrectOptionId = correctIndex
+            };
+        }
     }
 
     private async Task HandlePollAnswerAsync(PollAnswer pollAnswer)
     {
         if (pollAnswer.User == null) return;
+
+        var userId = pollAnswer.User.Id;
+        var pollId = pollAnswer.PollId;
+
+        if (_activePolls.TryRemove(pollId, out var pollInfo))
+        {
+            if (_activeSessions.TryGetValue(userId, out var session))
+            {
+                // Check if user chose correct option
+                if (pollAnswer.OptionIds.Contains(pollInfo.CorrectOptionId))
+                {
+                    session.CorrectAnswersCount++;
+                }
+
+                session.CurrentIndex++;
+
+                // Wait 1.5 seconds so user can see poll green/red animation
+                await Task.Delay(1500);
+
+                // Send next poll or finish
+                await SendNextPollInSessionAsync(session);
+            }
+        }
 
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
@@ -282,8 +375,49 @@ public class TelegramBotService
             dbContext.Users.Add(dbUser);
             await dbContext.SaveChangesAsync();
         }
+    }
 
-        _logger.LogInformation("Poll answer received from Telegram User: {Name} ({Id})", dbUser.Name, tgUser.Id);
+    private async Task FinishQuizSessionAsync(ActiveQuizSession session)
+    {
+        _activeSessions.TryRemove(session.UserId, out _);
+
+        int total = session.Questions.Count;
+        int correct = session.CorrectAnswersCount;
+        double percentage = total > 0 ? (double)correct / total * 100 : 0;
+
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+
+        var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == session.UserId);
+        string userName = dbUser?.Name ?? "Telegram Dasturchi";
+
+        // Save Attempt to Database
+        var quiz = await dbContext.Quizzes.FirstOrDefaultAsync(q => q.Category == session.Category && q.Difficulty == session.Difficulty);
+        if (quiz != null)
+        {
+            var attempt = new QuizAttempt
+            {
+                QuizId = quiz.Id,
+                UserName = userName,
+                ScorePercentage = percentage,
+                CompletedAt = DateTime.UtcNow
+            };
+            dbContext.QuizAttempts.Add(attempt);
+            await dbContext.SaveChangesAsync();
+        }
+
+        string resultMsg = $"🎉 <b>TEST YAKUNLANDI!</b>\n\n" +
+                           $"👤 <b>Dasturchi:</b> {userName}\n" +
+                           $"📚 <b>Bo'lim:</b> {session.Category.ToUpper()} ({session.Difficulty})\n" +
+                           $"🎯 <b>Natija:</b> {correct} / {total} ball ({Math.Round(percentage, 1)}%)\n\n" +
+                           $"🏆 <i>Natijangiz reyting bazasiga saqlandi!</i>\n\n" +
+                           $"Qayta test topshirish uchun /quiz buyrug'ini bosing.";
+
+        await _botClient.SendTextMessageAsync(
+            chatId: session.ChatId,
+            text: resultMsg,
+            parseMode: ParseMode.Html
+        );
     }
 
     private async Task SendUserStatsAsync(long chatId, TelegramUser? tgUser)
