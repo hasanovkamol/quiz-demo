@@ -1,6 +1,7 @@
 import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QuizService } from '../../services/quiz.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -32,10 +33,10 @@ import { QuizService } from '../../services/quiz.service';
           </div>
         </div>
 
-        <!-- Role Mode Switcher & Navigation Actions -->
+        <!-- Desktop Navigation -->
         <div class="hidden md:flex items-center gap-3">
           
-          <!-- Mode Switcher Pill -->
+          <!-- Role Switcher Pill -->
           <div class="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs">
             <button 
               (click)="switchPortal.emit('user')"
@@ -44,7 +45,6 @@ import { QuizService } from '../../services/quiz.service';
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition'">
               <span>🎓</span> User Mode
             </button>
-
             <button 
               (click)="switchPortal.emit('admin')"
               [class]="activePortal() === 'admin' ? 
@@ -56,15 +56,6 @@ import { QuizService } from '../../services/quiz.service';
 
           <!-- USER PORTAL ACTIONS -->
           @if (activePortal() === 'user') {
-            @if (quizService.currentUserName(); as userName) {
-              <button 
-                (click)="quizService.isNameModalOpen.set(true)"
-                class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-900 border border-slate-800 hover:bg-slate-800 transition">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                {{ userName }}
-              </button>
-            }
-
             @if (quizService.quizHistory().length > 0) {
               <button 
                 (click)="toggleHistory.emit()"
@@ -86,6 +77,46 @@ import { QuizService } from '../../services/quiz.service';
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
               </svg>
               Yangi Test Yaratish
+            </button>
+          }
+
+          <!-- LOGGED IN USER PROFILE + SIGN OUT -->
+          @if (authService.currentUser(); as user) {
+            <div class="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <!-- Avatar -->
+              @if (user.pictureUrl) {
+                <img [src]="user.pictureUrl" [alt]="user.name"
+                  class="w-8 h-8 rounded-full border-2 border-indigo-500/50 object-cover" />
+              } @else {
+                <div class="w-8 h-8 rounded-full bg-indigo-600 border-2 border-indigo-500/50 flex items-center justify-center text-white text-xs font-extrabold">
+                  {{ user.name.charAt(0).toUpperCase() }}
+                </div>
+              }
+              <!-- Name -->
+              <div class="hidden lg:block">
+                <div class="text-xs font-bold text-white leading-tight">{{ user.name }}</div>
+                <div class="text-[10px] text-slate-400">{{ user.role }}</div>
+              </div>
+              <!-- Sign Out -->
+              <button 
+                (click)="signOut()"
+                title="Chiqish (Sign Out)"
+                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 hover:text-rose-300 transition ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span class="hidden lg:inline">Chiqish</span>
+              </button>
+            </div>
+          } @else {
+            <!-- Not signed in: show Sign In button -->
+            <button 
+              (click)="quizService.isNameModalOpen.set(true)"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Kirish
             </button>
           }
 
@@ -125,29 +156,15 @@ import { QuizService } from '../../services/quiz.service';
             </button>
           </div>
 
-          @if (activePortal() === 'user') {
-            @if (quizService.currentUserName(); as userName) {
-              <button 
-                (click)="quizService.isNameModalOpen.set(true); isMobileMenuOpen.set(false)"
-                class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-900 border border-slate-800">
-                <span class="flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  {{ userName }}
-                </span>
-                <span class="text-[10px] text-slate-400">Profil</span>
-              </button>
-            }
-
-            @if (quizService.quizHistory().length > 0) {
-              <button 
-                (click)="toggleHistory.emit(); isMobileMenuOpen.set(false)"
-                class="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Tarix ({{ quizService.quizHistory().length }})
-              </button>
-            }
+          @if (activePortal() === 'user' && quizService.quizHistory().length > 0) {
+            <button 
+              (click)="toggleHistory.emit(); isMobileMenuOpen.set(false)"
+              class="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Tarix ({{ quizService.quizHistory().length }})
+            </button>
           }
 
           @if (activePortal() === 'admin') {
@@ -160,6 +177,42 @@ import { QuizService } from '../../services/quiz.service';
               Yangi Test Yaratish
             </button>
           }
+
+          <!-- Mobile User profile + Sign Out -->
+          @if (authService.currentUser(); as user) {
+            <div class="flex items-center justify-between px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800">
+              <div class="flex items-center gap-2">
+                @if (user.pictureUrl) {
+                  <img [src]="user.pictureUrl" [alt]="user.name" class="w-8 h-8 rounded-full border border-indigo-500/50 object-cover" />
+                } @else {
+                  <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-extrabold">
+                    {{ user.name.charAt(0).toUpperCase() }}
+                  </div>
+                }
+                <div>
+                  <div class="text-xs font-bold text-white">{{ user.name }}</div>
+                  <div class="text-[10px] text-slate-400">{{ user.role }}</div>
+                </div>
+              </div>
+              <button 
+                (click)="signOut(); isMobileMenuOpen.set(false)"
+                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Chiqish
+              </button>
+            </div>
+          } @else {
+            <button 
+              (click)="quizService.isNameModalOpen.set(true); isMobileMenuOpen.set(false)"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Tizimga Kirish
+            </button>
+          }
         </div>
       }
     </header>
@@ -167,6 +220,7 @@ import { QuizService } from '../../services/quiz.service';
 })
 export class NavbarComponent {
   readonly quizService = inject(QuizService);
+  readonly authService = inject(AuthService);
   readonly activePortal = input<'user' | 'admin'>('user');
   readonly isMobileMenuOpen = signal<boolean>(false);
 
@@ -177,6 +231,15 @@ export class NavbarComponent {
   goHome(): void {
     this.quizService.resetQuiz();
     this.switchPortal.emit('user');
+    this.isMobileMenuOpen.set(false);
+  }
+
+  signOut(): void {
+    this.authService.logout();
+    // Clear the stored user name and reset quiz state
+    this.quizService.currentUserName.set('');
+    localStorage.removeItem('quizmaster_user_name');
+    this.quizService.resetQuiz();
     this.isMobileMenuOpen.set(false);
   }
 }
