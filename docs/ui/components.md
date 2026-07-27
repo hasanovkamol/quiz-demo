@@ -1,42 +1,36 @@
 # Angular Standalone Component Reference
 
-Component directory structure and reference documentation.
+Component directory structure and reference documentation with full Mobile Responsiveness.
 
 ---
 
-## 🧱 Component Hierarchy
+## 🧱 Component Hierarchy & Mobile Responsiveness
 
 ### 1. `NavbarComponent` ([`navbar.component.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/navbar/navbar.component.ts))
+- **Mobile Navigation Drawer**: Features a sliding mobile navigation menu for small screens (< 768px).
 - Branding: `QuizMaster PRO` logo.
 - User Name badge & modal trigger.
 - Admin Panel toggle button.
 - Score History badge counter.
 - "Yangi Test" action button.
 
-### 2. `QuizListComponent` ([`quiz-list.component.spec.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/quiz-list/quiz-list.component.spec.ts))
-- Hero Banner with real-time search input.
-- "Qanday Ishlaydi?" (How it works) 3-step quick guide cards.
-- Category filter pills.
-- Quiz Cards grid showing difficulty badges (Oson: Emerald, O'rta: Amber, Qiyin: Rose), question count, time limit, and "Testni Boshlash" button.
+### 2. `QuizListComponent` ([`quiz-list.component.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/quiz-list/quiz-list.component.ts))
+- Responsive Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`.
+- Scrollable horizontal category filter pills for mobile touch screens.
+- Search input and category filtering.
 
 ### 3. `QuizPlayComponent` ([`quiz-play.component.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/quiz-play/quiz-play.component.ts))
-- Active quiz screen with step indicator buttons highlighting answered questions in green.
-- Live countdown timer turning red when < 60s remain.
-- Question card rendering formatted code snippets in editor style.
-- Option cards with A, B, C, D badges and selected checkmark indicator.
+- Mobile touch-friendly target areas (`min-h-[48px]`).
+- Integrated Anti-Cheating warnings and Interactive Code Execution Sandbox.
 
-### 4. `QuizResultComponent` ([`quiz-result.component.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/quiz-result/quiz-result.component.ts))
-- Circular SVG progress indicator displaying percentage score.
-- Grade verdict badge ("A'lo daraja!", "Barakalla!", etc.).
-- Question-by-question review section with explanations for each answer.
+### 4. `CodeEditorComponent` ([`code-editor.component.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/code-editor/code-editor.component.ts))
+- Mobile responsive dark-mode code editor with output console drawer.
 
 ### 5. `AdminDashboardComponent` ([`admin-dashboard.component.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/admin/admin-dashboard.component.ts))
-- System metrics cards (Total attempts, Unique users, Avg score, Total quizzes).
-- User Attempts table displaying `UserName`, `QuizTitle`, `CategoryName`, `ScorePercentage`, `CompletedAt`.
-- Semantic Kernel AI Question Generator tab.
+- Mobile scrollable attempts table and responsive AI question generator.
 
 ### 6. `ResultShareComponent` ([`result-share.component.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/result-share/result-share.component.ts))
-- Dedicated route view `/result/:id` displaying attempt scorecards for local network sharing.
+- Mobile scorecard view for LAN sharing.
 
 ### 7. `UserModalComponent` ([`user-modal.component.ts`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/user-modal/user-modal.component.ts))
-- Prompting modal for `Ism va Familiya` before starting quiz & Google OAuth Sign-In.
+- Responsive modal dialog for name entry and Google OAuth sign-in.
