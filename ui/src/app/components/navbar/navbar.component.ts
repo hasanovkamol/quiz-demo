@@ -2,6 +2,7 @@ import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QuizService } from '../../services/quiz.service';
 import { AuthService } from '../../services/auth.service';
+import { KeycloakService } from '../../services/keycloak.service';
 
 @Component({
   selector: 'app-navbar',
@@ -111,15 +112,29 @@ import { AuthService } from '../../services/auth.service';
               </button>
             </div>
           } @else {
-            <!-- Not signed in: show Sign In button -->
-            <button 
-              (click)="quizService.isNameModalOpen.set(true)"
-              class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-md shadow-indigo-600/20 transition-all duration-200 hover:scale-[1.02] active:scale-95">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-              Tizimga Kirish
-            </button>
+            <!-- Not signed in: show login buttons -->
+            <div class="flex items-center gap-2">
+              <!-- Keycloak Login -->
+              <button
+                (click)="loginWithKeycloak()"
+                class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 shadow-md shadow-orange-500/20 transition-all duration-200 hover:scale-[1.02] active:scale-95"
+                title="Keycloak orqali kirish">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                Kirish
+              </button>
+              <!-- Google / Modal Login -->
+              <button
+                (click)="quizService.isNameModalOpen.set(true)"
+                class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:bg-slate-800 transition-all duration-200"
+                title="Mehmonsiz davom etish">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Mehmon
+              </button>
+            </div>
           }
 
         </div>
@@ -232,7 +247,18 @@ export class NavbarComponent {
   readonly openCreator = output<void>();
   readonly toggleHistory = output<void>();
 
+  readonly keycloakService = inject(KeycloakService);
+
   get activeUser(): { name: string; role: string; pictureUrl?: string } | null {
+    // 1. Keycloak bilan kirgan bo'lsa — Keycloak profilini ko'rsat
+    if (this.keycloakService.isAuthenticated()) {
+      return {
+        name: this.keycloakService.fullName() || this.keycloakService.username(),
+        role: this.keycloakService.isAdmin() ? 'Admin' : 'User',
+        pictureUrl: this.keycloakService.pictureUrl() || undefined
+      };
+    }
+    // 2. Google OAuth bilan kirgan bo'lsa
     const authUser = this.authService.currentUser();
     if (authUser && authUser.name) {
       return {
@@ -241,14 +267,19 @@ export class NavbarComponent {
         pictureUrl: authUser.pictureUrl
       };
     }
+    // 3. Mehmon (lokal ism)
     const localName = this.quizService.currentUserName();
     if (localName) {
       return {
         name: localName,
-        role: 'User'
+        role: 'Mehmon'
       };
     }
     return null;
+  }
+
+  loginWithKeycloak(): void {
+    this.keycloakService.login();
   }
 
   goHome(): void {
@@ -258,8 +289,13 @@ export class NavbarComponent {
   }
 
   signOut(): void {
+    // Keycloak session bo'lsa — Keycloak orqali chiqamiz
+    if (this.keycloakService.isAuthenticated()) {
+      this.keycloakService.logout(window.location.origin);
+      return;
+    }
+    // Google OAuth
     this.authService.logout();
-    // Clear the stored user name and reset quiz state
     this.quizService.currentUserName.set('');
     localStorage.removeItem('quizmaster_user_name');
     this.quizService.resetQuiz();

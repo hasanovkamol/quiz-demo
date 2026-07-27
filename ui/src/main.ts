@@ -1,16 +1,24 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
-import { AppConfigService } from './app/services/app-config.service';
+import { KeycloakService } from './app/services/keycloak.service';
 
-// config.json ni ilovadan oldin yuklab, API URL ni aniqlash
+// 1. config.json ni ilovadan oldin yuklab, API URL va Keycloak konfigini aniqlash
 fetch('config.json')
   .then(r => r.ok ? r.json() : { apiUrl: '/api' })
   .catch(() => ({ apiUrl: '/api' }))
-  .then((cfg: { apiUrl: string }) => {
-    // Singleton AppConfigService ga bog'liq bo'lgani uchun window._appCfg ga saqlaymiz
+  .then(async (cfg: { apiUrl: string; keycloak?: any }) => {
+    // AppConfigService singleton window.__APP_CONFIG__ dan o'qiydi
     (window as any).__APP_CONFIG__ = cfg;
+
+    // 2. Keycloak ni Angular bootstrap'dan OLDIN ishga tushiramiz
+    if (cfg.keycloak) {
+      const kc = new KeycloakService();
+      (window as any).__KEYCLOAK_SERVICE__ = kc;
+      await kc.init(cfg.keycloak);
+    }
+
+    // 3. Angular ilovasini ishga tushiramiz
     return bootstrapApplication(App, appConfig);
   })
-  .catch((err) => console.error(err));
-
+  .catch((err) => console.error('[main] bootstrap error:', err));

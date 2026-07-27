@@ -25,6 +25,10 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY: edge
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
     ports:
       - "8080:8080"
     networks:
@@ -84,8 +88,8 @@ services:
     container_name: quiz_aspnet_backend
     environment:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=quizdb;Username=postgres;Password=postgres
-      - Keycloak__Authority=http://keycloak:8080/realms/quizmaster-realm
-      - Keycloak__AdminUrl=http://keycloak:8080
+      - Keycloak__Authority=http://keycloak:8080/auth/realms/quizmaster-realm
+      - Keycloak__AdminUrl=http://keycloak:8080/auth
       - Keycloak__Realm=quizmaster-realm
       - Keycloak__AdminUsername=admin
       - Keycloak__AdminPassword=admin
