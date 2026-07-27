@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { Quiz, QuizCategory, QuizResult, UserAnswer, QuizAttempt } from '../models/quiz.model';
 import { SAMPLE_QUIZZES } from '../data/sample-quizzes';
 import { QuizApiService } from './quiz-api.service';
+import { TelegramWebAppService } from './telegram-webapp.service';
 import confetti from 'canvas-confetti';
 
 const LOCAL_STORAGE_CUSTOM_QUIZZES_KEY = 'quizmaster_custom_quizzes';
@@ -13,6 +14,7 @@ const LOCAL_STORAGE_USER_NAME_KEY = 'quizmaster_user_name';
 })
 export class QuizService {
   private readonly apiService = inject(QuizApiService);
+  private readonly tgWebAppService = inject(TelegramWebAppService);
 
   // User Name state
   readonly currentUserName = signal<string>('');
@@ -81,9 +83,17 @@ export class QuizService {
   }
 
   private loadInitialData(): void {
-    const savedName = localStorage.getItem(LOCAL_STORAGE_USER_NAME_KEY);
-    if (savedName) {
-      this.currentUserName.set(savedName);
+    // Automatic Telegram User Authentication
+    const tgName = this.tgWebAppService.getFormattedUserName();
+    if (tgName) {
+      this.currentUserName.set(tgName);
+      localStorage.setItem(LOCAL_STORAGE_USER_NAME_KEY, tgName);
+      this.isNameModalOpen.set(false);
+    } else {
+      const savedName = localStorage.getItem(LOCAL_STORAGE_USER_NAME_KEY);
+      if (savedName) {
+        this.currentUserName.set(savedName);
+      }
     }
 
     this.apiService.getQuizzes().subscribe(apiQuizzes => {
@@ -131,9 +141,14 @@ export class QuizService {
 
   startQuiz(quizId: string): void {
     if (!this.currentUserName()) {
-      this.pendingQuizIdToStart = quizId;
-      this.isNameModalOpen.set(true);
-      return;
+      const tgName = this.tgWebAppService.getFormattedUserName();
+      if (tgName) {
+        this.setUserName(tgName);
+      } else {
+        this.pendingQuizIdToStart = quizId;
+        this.isNameModalOpen.set(true);
+        return;
+      }
     }
 
     const found = this.quizzes().find(q => q.id === quizId);

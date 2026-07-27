@@ -8,12 +8,21 @@ declare global {
   }
 }
 
+export interface TelegramUser {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+  photo_url?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class TelegramWebAppService {
   readonly isTelegramWebApp = signal<boolean>(false);
-  readonly telegramUser = signal<any>(null);
+  readonly telegramUser = signal<TelegramUser | null>(null);
 
   constructor() {
     this.initTelegramWebApp();
@@ -22,13 +31,33 @@ export class TelegramWebAppService {
   private initTelegramWebApp(): void {
     const tg = window.Telegram?.WebApp;
     if (tg) {
-      tg.ready();
-      tg.expand();
-      this.isTelegramWebApp.set(true);
-      if (tg.initDataUnsafe?.user) {
-        this.telegramUser.set(tg.initDataUnsafe.user);
+      try {
+        tg.ready();
+        tg.expand();
+        this.isTelegramWebApp.set(true);
+
+        if (tg.initDataUnsafe?.user) {
+          this.telegramUser.set(tg.initDataUnsafe.user);
+        }
+      } catch (e) {
+        console.warn('Failed to initialize Telegram WebApp SDK:', e);
       }
     }
+  }
+
+  /**
+   * Returns a formatted Telegram username (e.g. "@username" or "First Last")
+   */
+  getFormattedUserName(): string | null {
+    const user = this.telegramUser();
+    if (!user) return null;
+
+    if (user.username) {
+      return `@${user.username}`;
+    }
+
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    return fullName || `TelegramUser_${user.id}`;
   }
 
   get initData(): string {
