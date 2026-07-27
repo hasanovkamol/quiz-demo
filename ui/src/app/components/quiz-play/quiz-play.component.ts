@@ -1,18 +1,51 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QuizService } from '../../services/quiz.service';
+import { CodeEditorComponent } from '../code-editor/code-editor.component';
 
 @Component({
   selector: 'app-quiz-play',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CodeEditorComponent],
   template: `
     @if (quizService.currentQuiz(); as quiz) {
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 select-none">
         
+        <!-- Anti-Cheating Warning Banner -->
+        @if (cheatingWarningsCount() > 0) {
+          <div class="mb-6 p-4 rounded-xl bg-amber-950/80 border border-amber-600/40 text-amber-300 flex items-center justify-between shadow-xl backdrop-blur-md animate-pulse">
+            <div class="flex items-center space-x-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-amber-400">Anti-Cheating Ogohlantirish</h4>
+                <p class="text-xs text-amber-200/90 mt-0.5">
+                  Diqqat! Test vaqtida brauzer oynasini almashtirish taqiqlangan. Ogohlantirish: <strong>{{ cheatingWarningsCount() }} / 3</strong>
+                </p>
+              </div>
+            </div>
+            <span class="text-xs font-mono font-bold px-2.5 py-1 rounded bg-amber-500/20 border border-amber-500/30 text-amber-300">
+              {{ 3 - cheatingWarningsCount() }} ta qoldi
+            </span>
+          </div>
+        }
+
+        <!-- Toast Warning Modal for Copy/Paste/RightClick -->
+        @if (showViolationToast()) {
+          <div class="fixed top-6 right-6 z-50 max-w-md p-4 rounded-2xl bg-rose-950/90 border border-rose-600/60 text-white shadow-2xl backdrop-blur-md flex items-start space-x-3 animate-bounce">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <h4 class="text-xs font-bold text-rose-300 uppercase tracking-wider">Haqqoniy Baholash Qoidasi</h4>
+              <p class="text-xs text-rose-100 mt-1">{{ violationMessage() }}</p>
+            </div>
+          </div>
+        }
+
         <!-- Header Bar -->
         <div class="glass-card rounded-2xl p-4 sm:p-6 mb-6 border border-slate-800 flex items-center justify-between gap-4 flex-wrap">
-          
           <div class="flex items-center gap-3">
             <button 
               (click)="showConfirmExit.set(true)"
@@ -45,7 +78,6 @@ import { QuizService } from '../../services/quiz.service';
             </svg>
             {{ quizService.formattedTimer() }}
           </div>
-
         </div>
 
         <!-- Progress Bar -->
@@ -74,8 +106,6 @@ import { QuizService } from '../../services/quiz.service';
         <!-- Question Card -->
         @if (quizService.currentQuestion(); as question) {
           <div class="glass-card rounded-2xl p-6 sm:p-8 mb-8 border border-slate-800">
-            
-            <!-- Question text -->
             <div class="mb-6">
               <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-2 block">
                 Savol #{{ quizService.currentQuestionIndex() + 1 }}
@@ -86,46 +116,55 @@ import { QuizService } from '../../services/quiz.service';
             </div>
 
             <!-- Optional Code Snippet Block -->
-            @if (question.codeSnippet) {
+            @if (question.codeSnippet && !question.isCodeQuestion) {
               <div class="mb-8 rounded-xl bg-slate-950 border border-slate-800 p-4 sm:p-5 font-mono text-xs sm:text-sm text-indigo-200 overflow-x-auto relative group">
                 <div class="absolute top-2 right-2 text-[10px] uppercase font-bold text-slate-500 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Code</div>
                 <pre class="whitespace-pre-wrap leading-relaxed"><code>{{ question.codeSnippet }}</code></pre>
               </div>
             }
 
-            <!-- Options Grid -->
-            <div class="space-y-3.5">
-              @for (option of question.options; track option.id; let optIdx = $index) {
-                <div 
-                  (click)="quizService.selectOption(option.id)"
-                  [class]="quizService.currentSelectedOptionId() === option.id ? 
-                    'p-4 rounded-xl border-2 border-indigo-500 bg-indigo-500/10 text-white flex items-start gap-4 cursor-pointer transition-all shadow-md shadow-indigo-500/10' : 
-                    'p-4 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-700 text-slate-300 flex items-start gap-4 cursor-pointer transition-all'">
-                  
-                  <!-- Option Letter / Checkbox Circle -->
+            <!-- Interactive Code Sandbox Editor -->
+            @if (question.isCodeQuestion) {
+              <app-code-editor
+                [initialCode]="question.initialCodeTemplate || ''"
+                [expectedOutput]="question.expectedOutput || ''"
+                (codeSubmitted)="handleCodeAnswer(question.id, $event)"
+                (cheatingAttempt)="triggerViolationToast($event)">
+              </app-code-editor>
+            }
+
+            <!-- Standard Multiple Choice Options Grid -->
+            @if (!question.isCodeQuestion) {
+              <div class="space-y-3.5">
+                @for (option of question.options; track option.id; let optIdx = $index) {
                   <div 
+                    (click)="quizService.selectOption(option.id)"
                     [class]="quizService.currentSelectedOptionId() === option.id ? 
-                      'w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-sm' : 
-                      'w-7 h-7 rounded-lg bg-slate-800 text-slate-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-slate-700'">
-                    {{ getOptionLetter(optIdx) }}
-                  </div>
-
-                  <!-- Option Text -->
-                  <div class="text-sm font-medium leading-relaxed pt-0.5 flex-1">
-                    {{ option.text }}
-                  </div>
-
-                  <!-- Selected Check icon -->
-                  @if (quizService.currentSelectedOptionId() === option.id) {
-                    <div class="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center shrink-0 mt-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                      </svg>
+                      'p-4 rounded-xl border-2 border-indigo-500 bg-indigo-500/10 text-white flex items-start gap-4 cursor-pointer transition-all shadow-md shadow-indigo-500/10' : 
+                      'p-4 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-700 text-slate-300 flex items-start gap-4 cursor-pointer transition-all'">
+                    
+                    <div 
+                      [class]="quizService.currentSelectedOptionId() === option.id ? 
+                        'w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-sm' : 
+                        'w-7 h-7 rounded-lg bg-slate-800 text-slate-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-slate-700'">
+                      {{ getOptionLetter(optIdx) }}
                     </div>
-                  }
-                </div>
-              }
-            </div>
+
+                    <div class="text-sm font-medium leading-relaxed pt-0.5 flex-1">
+                      {{ option.text }}
+                    </div>
+
+                    @if (quizService.currentSelectedOptionId() === option.id) {
+                      <div class="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center shrink-0 mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
 
           </div>
         }
@@ -195,8 +234,58 @@ export class QuizPlayComponent {
   readonly quizService = inject(QuizService);
   readonly showConfirmExit = signal<boolean>(false);
 
+  readonly cheatingWarningsCount = signal<number>(0);
+  readonly showViolationToast = signal<boolean>(false);
+  readonly violationMessage = signal<string>('');
+
+  @HostListener('document:copy', ['$event'])
+  @HostListener('document:cut', ['$event'])
+  onCopyCutAttempt(event: ClipboardEvent): void {
+    event.preventDefault();
+    this.triggerViolationToast('Haqqoniy baholash uchun savol matnini nusxalash (Copy) taqiqlangan!');
+  }
+
+  @HostListener('document:contextmenu', ['$event'])
+  onContextMenuAttempt(event: MouseEvent): void {
+    event.preventDefault();
+    this.triggerViolationToast('Test vaqtida sichqonchaning o\'ng tugmasi taqiqlangan!');
+  }
+
+  @HostListener('window:visibilitychange')
+  @HostListener('window:blur')
+  onWindowBlur(): void {
+    if (document.hidden && this.quizService.currentQuiz()) {
+      const newCount = this.cheatingWarningsCount() + 1;
+      this.cheatingWarningsCount.set(newCount);
+
+      if (newCount >= 3) {
+        this.triggerViolationToast('Ogohlantirishlar soni oshdi (3/3). Test avtomatik topshirilmoqda!');
+        setTimeout(() => this.quizService.finishQuiz(), 1500);
+      } else {
+        this.triggerViolationToast(`Boshqa oynaga o'tildi! Ogohlantirish: ${newCount} / 3`);
+      }
+    }
+  }
+
+  triggerViolationToast(msg: string): void {
+    this.violationMessage.set(msg);
+    this.showViolationToast.set(true);
+    setTimeout(() => this.showViolationToast.set(false), 4000);
+  }
+
+  handleCodeAnswer(questionId: string, result: { code: string; isCorrect: boolean }): void {
+    const currentQuiz = this.quizService.currentQuiz();
+    if (!currentQuiz) return;
+
+    const question = currentQuiz.questions.find(q => q.id === questionId);
+    if (!question) return;
+
+    const selectedOptionId = result.isCorrect ? question.correctOptionId : 'incorrect-code-option';
+    this.quizService.selectOption(selectedOptionId);
+  }
+
   getOptionLetter(index: number): string {
-    return String.fromCharCode(65 + index); // A, B, C, D
+    return String.fromCharCode(65 + index);
   }
 
   isLastQuestion(): boolean {

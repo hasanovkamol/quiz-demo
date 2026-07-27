@@ -24,9 +24,10 @@ Welcome to the official modular documentation for the **QuizMaster PRO** Full-St
 
 ### 3. 🎨 Frontend Single Page Application (`./docs/ui/`)
 - 📄 **[ui/overview.md](./ui/overview.md)**: Angular 18+ Architecture & Signals Reactivity
+- 📄 **[ui/anti-cheating-and-sandbox.md](./ui/anti-cheating-and-sandbox.md)**: Anti-Cheating Safeguards (Copy/Paste & Tab Switch Protection) & Interactive Code Sandbox
 - 📄 **[ui/components.md](./ui/components.md)**: Standalone Component Library Reference
 - 📄 **[ui/refresh-token-flow.md](./ui/refresh-token-flow.md)**: 5-Minute Silent Background Token Refresh Timer
-- 📄 **[ui/unit-tests.md](./ui/unit-tests.md)**: Jasmine/Karma Component & Service Spec Suites (30/30 Passed across 12 files)
+- 📄 **[ui/unit-tests.md](./ui/unit-tests.md)**: Jasmine/Karma Component & Service Spec Suites (31/31 Passed across 12 files)
 
 ---
 
@@ -41,7 +42,7 @@ Welcome to the official modular documentation for the **QuizMaster PRO** Full-St
 
 ## 🚀 Quick Execution Commands
 
-### Run Full-Stack Test Suite (37/37 Passed)
+### Run Full-Stack Test Suite (38/38 Passed)
 ```bash
 npm run test
 ```

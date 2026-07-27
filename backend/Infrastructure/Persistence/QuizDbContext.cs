@@ -20,19 +20,19 @@ public class QuizDbContext : DbContext
 
         modelBuilder.Entity<Quiz>()
             .HasMany(q => q.Questions)
-            .WithOne(q => q.Quiz)
+            .WithOne()
             .HasForeignKey(q => q.QuizId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Question>()
             .HasMany(q => q.Options)
-            .WithOne(o => o.Question)
+            .WithOne()
             .HasForeignKey(o => o.QuestionId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<QuizAttempt>()
             .HasMany(a => a.UserAnswers)
-            .WithOne(u => u.Attempt)
+            .WithOne()
             .HasForeignKey(u => u.AttemptId)
             .OnDelete(DeleteBehavior.Cascade);
 

@@ -1,55 +1,50 @@
-export type QuizCategory = 'angular' | 'dotnet' | 'webdev' | 'custom';
+export type QuizCategory = 'all' | 'angular' | 'dotnet' | 'webdev' | 'custom';
 export type Difficulty = 'Oson' | 'O\'rta' | 'Qiyin';
 
 export interface QuestionOption {
   id: string;
+  questionId?: string;
   text: string;
 }
 
 export interface Question {
   id: string;
+  quizId?: string;
   text: string;
   codeSnippet?: string;
-  options: QuestionOption[];
   correctOptionId: string;
   explanation: string;
+  options: QuestionOption[];
+  isCodeQuestion?: boolean;
+  initialCodeTemplate?: string;
+  expectedOutput?: string;
 }
 
 export interface Quiz {
   id: string;
   title: string;
-  category: QuizCategory;
+  category: string;
   categoryName: string;
   description: string;
-  iconName: string;
+  iconName?: string;
   difficulty: Difficulty;
   timeLimitSeconds: number;
-  questions: Question[];
   isCustom?: boolean;
+  questionsCount?: number;
+  questions: Question[];
 }
 
 export interface UserAnswer {
   questionId: string;
-  selectedOptionId: string | null;
-  isCorrect: boolean;
-  timeSpentSeconds: number;
-}
-
-export interface QuizResult {
-  id: string;
-  quizId: string;
-  quizTitle: string;
-  categoryName: string;
-  totalQuestions: number;
-  correctAnswersCount: number;
-  scorePercentage: number;
-  totalTimeSpentSeconds: number;
-  completedAt: string;
-  userAnswers: UserAnswer[];
+  selectedOptionId: string;
+  isCorrect?: boolean;
+  timeSpentSeconds?: number;
+  isCodeAnswer?: boolean;
+  submittedCode?: string;
 }
 
 export interface QuizAttempt {
-  id: string;
+  id?: string;
   quizId: string;
   quizTitle: string;
   categoryName: string;
@@ -58,6 +53,22 @@ export interface QuizAttempt {
   correctAnswersCount: number;
   scorePercentage: number;
   totalTimeSpentSeconds: number;
-  completedAt: string;
+  completedAt?: string;
+  cheatingWarningsCount?: number;
+  cheatingDetected?: boolean;
   userAnswers: UserAnswer[];
+}
+
+export interface QuizResult {
+  id?: string;
+  quizId: string;
+  quizTitle: string;
+  categoryName: string;
+  userName?: string;
+  totalQuestions: number;
+  correctAnswersCount: number;
+  scorePercentage: number;
+  totalTimeSpentSeconds: number;
+  userAnswers: UserAnswer[];
+  completedAt: string;
 }

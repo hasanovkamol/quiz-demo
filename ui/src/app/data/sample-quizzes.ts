@@ -2,6 +2,38 @@ import { Quiz } from '../models/quiz.model';
 
 export const SAMPLE_QUIZZES: Quiz[] = [
   {
+    id: 'quiz-coding-sandbox',
+    title: 'TypeScript Algorithms & Live Code Sandbox',
+    category: 'custom',
+    categoryName: 'Dasturlash va Sandbox',
+    description: 'Jonli kod redaktorida berilgan algoritmik masalalarni yozing va "Kodni Tekshirish" tugmasini bosib tekshiring.',
+    iconName: 'terminal',
+    difficulty: 'O\'rta',
+    timeLimitSeconds: 300,
+    questions: [
+      {
+        id: 'q-code-1',
+        text: 'Ikki sonning yig\'indisini hisoblaydigan funksiyani konsolga chiqaring (`console.log(add(5, 10))` -> 15).',
+        isCodeQuestion: true,
+        initialCodeTemplate: `function add(a, b) {\n  return a + b;\n}\n\nconsole.log(add(5, 10));`,
+        expectedOutput: '15',
+        options: [],
+        correctOptionId: 'code-correct',
+        explanation: 'Konsolga `15` chiqaradigan to\'g\'ri funksiya kiritildi.'
+      },
+      {
+        id: 'q-code-2',
+        text: 'Massivdagi juft sonlarni filter qilib konsolga chiqaruvchi kod yozing.',
+        isCodeQuestion: true,
+        initialCodeTemplate: `const numbers = [1, 2, 3, 4, 5, 6];\nconst evens = numbers.filter(n => n % 2 === 0);\nconsole.log(evens.join(','));`,
+        expectedOutput: '2,4,6',
+        options: [],
+        correctOptionId: 'code-correct',
+        explanation: 'Massiv juft sonlari `2,4,6` chiqarildi.'
+      }
+    ]
+  },
+  {
     id: 'quiz-angular-1',
     title: 'Angular 18+ & Signals Mastery',
     category: 'angular',
@@ -143,7 +175,7 @@ export const SAMPLE_QUIZZES: Quiz[] = [
         options: [
           { id: 'opt-1', text: 'Yuqori darajali modullar quyi darajali modullarga bog\'lanmasligi, ikkalasi ham abstraktsiyaga (interfeysga) bog\'lanishi kerak' },
           { id: 'opt-2', text: 'Har bir klass faqat bitta mas\'uliyatga ega bo\'lishi kerak' },
-          { id: 'opt-3', text: 'Klasslar kengaytirish uchun ochiq, o\'zgartirish uchun yopiq bo\'lishi kerak' },
+          { id: 'opt-3', text: 'Klasslar kengaytirish uchun ochoq, o\'zgartirish uchun yopiq bo\'lishi kerak' },
           { id: 'opt-4', text: 'Interfeyslar iloji boricha kichik va maxsus bo\'lishi kerak' }
         ],
         correctOptionId: 'opt-1',
