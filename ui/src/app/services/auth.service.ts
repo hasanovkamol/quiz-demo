@@ -27,12 +27,13 @@ declare const google: {
 @Injectable({
   providedIn: 'root'
 })
-export class AuthService {
+export class AuthService
+{
   private readonly http = inject(HttpClient);
 
   // ↓ Replace with your actual Google Client ID from Google Cloud Console
   // https://console.cloud.google.com → APIs & Services → Credentials
-  private readonly GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+  private readonly GOOGLE_CLIENT_ID = '96736144451-0t99t4s70ka2quuuk3ov2ffatrto23i3.apps.googleusercontent.com';
 
   readonly currentUser = signal<User | null>(null);
   readonly token = signal<string | null>(null);
@@ -41,41 +42,51 @@ export class AuthService {
 
   private refreshTimer: any = null;
 
-  constructor() {
+  constructor()
+  {
     this.restoreSession();
     this.initGoogleIdentity();
   }
 
-  private restoreSession(): void {
+  private restoreSession(): void
+  {
     const savedToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
     const savedRefreshToken = localStorage.getItem(LOCAL_STORAGE_REFRESH_TOKEN_KEY);
     const savedUser = localStorage.getItem(LOCAL_STORAGE_USER_KEY);
 
-    if (savedToken && savedUser) {
-      try {
+    if (savedToken && savedUser)
+    {
+      try
+      {
         this.token.set(savedToken);
         this.refreshToken.set(savedRefreshToken);
         this.currentUser.set(JSON.parse(savedUser));
         this.scheduleSilentRefresh(270);
-      } catch (e) {
+      } catch (e)
+      {
         this.logout();
       }
     }
   }
 
-  private initGoogleIdentity(): void {
-    const waitForGoogle = () => {
-      if (typeof google !== 'undefined' && google?.accounts?.id) {
+  private initGoogleIdentity(): void
+  {
+    const waitForGoogle = () =>
+    {
+      if (typeof google !== 'undefined' && google?.accounts?.id)
+      {
         google.accounts.id.initialize({
           client_id: this.GOOGLE_CLIENT_ID,
-          callback: (response) => {
+          callback: (response) =>
+          {
             this.handleGoogleCredential(response.credential);
           },
           auto_select: false,
           cancel_on_tap_outside: true
         });
         this.isGoogleReady.set(true);
-      } else {
+      } else
+      {
         setTimeout(waitForGoogle, 300);
       }
     };
@@ -86,14 +97,17 @@ export class AuthService {
    * Triggers Google One Tap / Sign-In popup.
    * onSuccess callback is called with User after backend authentication.
    */
-  triggerGoogleSignIn(onSuccess: (user: User) => void, onError: () => void): void {
-    if (!this.isGoogleReady()) {
+  triggerGoogleSignIn(onSuccess: (user: User) => void, onError: () => void): void
+  {
+    if (!this.isGoogleReady())
+    {
       console.warn('Google Identity Services SDK is not ready yet. Retrying...');
       setTimeout(() => this.triggerGoogleSignIn(onSuccess, onError), 500);
       return;
     }
 
-    if (this.GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
+    if (this.GOOGLE_CLIENT_ID === '96736144451-0t99t4s70ka2quuuk3ov2ffatrto23i3.apps.googleusercontent.com')
+    {
       // Demo mode fallback (no real Google Client ID configured)
       onError();
       return;
@@ -107,9 +121,11 @@ export class AuthService {
   private _pendingGoogleCallback: ((user: User) => void) | null = null;
   private _pendingGoogleErrorCallback: (() => void) | null = null;
 
-  private handleGoogleCredential(idToken: string): void {
+  private handleGoogleCredential(idToken: string): void
+  {
     this.googleLogin(idToken).subscribe({
-      next: (res) => {
+      next: (res) =>
+      {
         const user: User = {
           id: res.userId,
           email: res.email,
@@ -118,14 +134,17 @@ export class AuthService {
           role: res.role,
           permissions: res.permissions || []
         };
-        if (this._pendingGoogleCallback) {
+        if (this._pendingGoogleCallback)
+        {
           this._pendingGoogleCallback(user);
           this._pendingGoogleCallback = null;
           this._pendingGoogleErrorCallback = null;
         }
       },
-      error: () => {
-        if (this._pendingGoogleErrorCallback) {
+      error: () =>
+      {
+        if (this._pendingGoogleErrorCallback)
+        {
           this._pendingGoogleErrorCallback();
           this._pendingGoogleCallback = null;
           this._pendingGoogleErrorCallback = null;
@@ -134,13 +153,15 @@ export class AuthService {
     });
   }
 
-  hasPermission(permission: string): boolean {
+  hasPermission(permission: string): boolean
+  {
     const user = this.currentUser();
     if (!user || !user.permissions) return false;
     return user.permissions.includes(permission);
   }
 
-  googleLogin(idToken: string, fallbackName?: string, fallbackEmail?: string): Observable<AuthResponse> {
+  googleLogin(idToken: string, fallbackName?: string, fallbackEmail?: string): Observable<AuthResponse>
+  {
     return this.http.post<AuthResponse>('/api/auth/google-login', {
       idToken,
       fallbackName,
@@ -150,7 +171,8 @@ export class AuthService {
     );
   }
 
-  requestTokenRefresh(): Observable<AuthResponse | null> {
+  requestTokenRefresh(): Observable<AuthResponse | null>
+  {
     const currentRefresh = this.refreshToken();
     const user = this.currentUser();
 
@@ -161,7 +183,8 @@ export class AuthService {
       userId: user.id
     }).pipe(
       tap(res => this.handleAuthSuccess(res)),
-      catchError(() => {
+      catchError(() =>
+      {
         console.warn('Silent token refresh failed, logging out session');
         this.logout();
         return of(null);
@@ -169,8 +192,10 @@ export class AuthService {
     );
   }
 
-  private handleAuthSuccess(res: AuthResponse): void {
-    if (res && res.token) {
+  private handleAuthSuccess(res: AuthResponse): void
+  {
+    if (res && res.token)
+    {
       const user: User = {
         id: res.userId,
         email: res.email,
@@ -185,7 +210,8 @@ export class AuthService {
       this.currentUser.set(user);
 
       localStorage.setItem(LOCAL_STORAGE_TOKEN_KEY, res.token);
-      if (res.refreshToken) {
+      if (res.refreshToken)
+      {
         localStorage.setItem(LOCAL_STORAGE_REFRESH_TOKEN_KEY, res.refreshToken);
       }
       localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(user));
@@ -195,25 +221,31 @@ export class AuthService {
     }
   }
 
-  private scheduleSilentRefresh(delaySeconds: number): void {
+  private scheduleSilentRefresh(delaySeconds: number): void
+  {
     this.clearRefreshTimer();
-    this.refreshTimer = setTimeout(() => {
+    this.refreshTimer = setTimeout(() =>
+    {
       this.requestTokenRefresh().subscribe();
     }, delaySeconds * 1000);
   }
 
-  private clearRefreshTimer(): void {
-    if (this.refreshTimer) {
+  private clearRefreshTimer(): void
+  {
+    if (this.refreshTimer)
+    {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
   }
 
-  logout(): void {
+  logout(): void
+  {
     this.clearRefreshTimer();
 
     // Sign out from Google Identity Services to clear session
-    if (typeof google !== 'undefined' && google?.accounts?.id) {
+    if (typeof google !== 'undefined' && google?.accounts?.id)
+    {
       google.accounts.id.disableAutoSelect();
     }
 
