@@ -8,7 +8,20 @@ import { Quiz, QuizAttempt } from '../models/quiz.model';
 })
 export class QuizApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api';
+
+  // Dynamic API base URL:
+  // - GitHub Pages (hasanovkamol.github.io) → use local gateway directly (Cloudflare tunnel or localhost)
+  // - Local Docker / gateway → relative /api (same origin)
+  private readonly baseUrl = this.resolveApiBase();
+
+  private resolveApiBase(): string {
+    if (typeof window !== 'undefined' && window.location.hostname === 'hasanovkamol.github.io') {
+      // GitHub Pages → Backend is served via local gateway on the LAN machine
+      // Use the Cloudflare tunnel URL or direct localhost gateway
+      return 'http://localhost:5005/api';
+    }
+    return '/api';
+  }
 
   getQuizzes(): Observable<Quiz[]> {
     return this.http.get<Quiz[]>(`${this.baseUrl}/quizzes`).pipe(
