@@ -1,10 +1,10 @@
-# Backend Overview: Clean Architecture & Minimal APIs
+# Backend Overview: ASP.NET Core 10 Minimal APIs & Clean Architecture
 
-Detailed breakdown of the ASP.NET Core 9 Web API architecture.
+Detailed breakdown of the ASP.NET Core 10 Web API architecture.
 
 ---
 
-## 📐 Clean Architecture Layering
+## 📐 Clean Architecture & .NET 10.0 Target Framework
 
 ```
 backend/
@@ -14,6 +14,9 @@ backend/
 ├── Infrastructure/           # Persistence (QuizDbContext, DbInitializer), AI, Identity
 └── Endpoints/                     # Minimal API Endpoint Group Mappers
 ```
+
+- **Target Framework**: `.NET 10.0` (`<TargetFramework>net10.0</TargetFramework>`).
+- **Docker Image**: `mcr.microsoft.com/dotnet/sdk:10.0` and `mcr.microsoft.com/dotnet/aspnet:10.0`.
 
 ---
 
