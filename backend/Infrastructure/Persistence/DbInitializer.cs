@@ -7,13 +7,26 @@ public static class DbInitializer
 {
     public static async Task InitializeAsync(QuizDbContext context)
     {
-        if (context.Database.IsNpgsql())
+        var retries = 5;
+        while (retries > 0)
         {
-            await context.Database.MigrateAsync();
-        }
-        else
-        {
-            await context.Database.EnsureCreatedAsync();
+            try
+            {
+                if (context.Database.IsNpgsql())
+                {
+                    await context.Database.MigrateAsync();
+                }
+                else
+                {
+                    await context.Database.EnsureCreatedAsync();
+                }
+                break;
+            }
+            catch (Exception) when (retries > 1)
+            {
+                retries--;
+                await Task.Delay(2000);
+            }
         }
 
         if (await context.Quizzes.AnyAsync())
