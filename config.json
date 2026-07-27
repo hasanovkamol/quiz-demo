@@ -1,7 +1,7 @@
 {
-  "apiUrl": "https://antibodies-garden-rip-casa.trycloudflare.com/api",
+  "apiUrl": "/api",
   "keycloak": {
-    "url": "https://antibodies-garden-rip-casa.trycloudflare.com/auth",
+    "url": "/auth",
     "realm": "quizmaster-realm",
     "clientId": "quizmaster-app"
   }
