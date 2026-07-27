@@ -15,7 +15,10 @@ QuizMaster PRO is an enterprise-grade, microservice-ready Full-Stack assessment 
 4. **Anti-Cheating Safeguards (Copy/Paste & Tab Switch Blocking)**: Intercepts `copy`, `cut`, `paste`, `contextmenu` (right click) events with violation warning modals. Tracks tab switches (`visibilitychange` / `blur`) up to **3 warnings** before automatic test finish.
 5. **Interactive Code Execution Sandbox Component**: [`CodeEditorComponent`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/code-editor/code-editor.component.ts) featuring line numbers, dark editor container, paste blocking, and **"Kodni Tekshirish" (Run Code)** execution drawer.
 6. **Infisical Centralized Secret & Config Management**: Integrated Infisical container cluster (`quiz_infisical_secrets`, `infisical_postgres_db`, `infisical_redis_cache`) in [`docker-compose.yml`](file:///home/user02/Projects/AI%20Projects/Qiuz/docker-compose.yml).
-7. **Single Root Command Test Execution**: `npm run test` automatically executes both Angular UI tests (31/31 passed) and Backend Integration tests (7/7 passed).
+7. **Google OAuth 2.0 GIS & User Profile Sign-Out**: Real Google Identity Services (GIS) One Tap integration, User Profile avatar & role display, explicit Sign-Out in `NavbarComponent`.
+8. **Nginx API Reverse Proxy for UI**: Dedicated [`ui/nginx.conf`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/nginx.conf) with `/api/` proxying to `http://backend:5000/api/` enabling both port `8081` and Gateway port `80` access.
+9. **EF Core Model Relationships & Migration**: Resolved `FK_QuestionOptions_Questions_QuestionId1` shadow property bug via explicit `.WithOne(o => o.Question)` and `.WithOne(u => u.Attempt)` EF Core mappings and migration `FixShadowPropertiesFK`.
+10. **Single Root Command Test Execution**: `npm run test` automatically executes both Angular UI tests (31/31 passed) and Backend Integration tests (7/7 passed).
 
 ---
 
