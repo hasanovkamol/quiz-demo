@@ -350,29 +350,43 @@ public class TelegramBotService
 
                 session.CurrentIndex++;
 
-                await Task.Delay(1500);
+                await Task.Delay(1200);
                 await SendNextPollInSessionAsync(session);
             }
         }
 
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
-
-        var tgUser = pollAnswer.User;
-        var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == tgUser.Id);
-
-        if (dbUser == null)
+        try
         {
-            dbUser = new UserEntity
+            using var scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+
+            if (dbContext.Database.IsNpgsql())
             {
-                TelegramUserId = tgUser.Id,
-                TelegramUsername = tgUser.Username,
-                Name = $"{tgUser.FirstName} {tgUser.LastName}".Trim(),
-                Email = $"{tgUser.Id}@telegram.user",
-                Role = "User"
-            };
-            dbContext.Users.Add(dbUser);
-            await dbContext.SaveChangesAsync();
+                await dbContext.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
+                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
+            }
+
+            var tgUser = pollAnswer.User;
+            var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == tgUser.Id);
+
+            if (dbUser == null)
+            {
+                dbUser = new UserEntity
+                {
+                    TelegramUserId = tgUser.Id,
+                    TelegramUsername = tgUser.Username,
+                    Name = $"{tgUser.FirstName} {tgUser.LastName}".Trim(),
+                    Email = $"{tgUser.Id}@telegram.user",
+                    Role = "User"
+                };
+                dbContext.Users.Add(dbUser);
+                await dbContext.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "User record save warning in Telegram update");
         }
     }
 
@@ -384,31 +398,50 @@ public class TelegramBotService
         int correct = session.CorrectAnswersCount;
         double percentage = total > 0 ? (double)correct / total * 100 : 0;
 
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+        string userName = "Telegram Dasturchi";
 
-        var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == session.UserId);
-        string userName = dbUser?.Name ?? "Telegram Dasturchi";
-
-        var quiz = await dbContext.Quizzes.FirstOrDefaultAsync(q => q.Category == session.Category && q.Difficulty == session.Difficulty);
-        if (quiz != null)
+        try
         {
-            var attempt = new QuizAttempt
+            using var scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+
+            if (dbContext.Database.IsNpgsql())
             {
-                QuizId = quiz.Id,
-                UserName = userName,
-                ScorePercentage = percentage,
-                CompletedAt = DateTime.UtcNow
-            };
-            dbContext.QuizAttempts.Add(attempt);
-            await dbContext.SaveChangesAsync();
+                await dbContext.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
+                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
+            }
+
+            var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == session.UserId);
+            if (dbUser != null)
+            {
+                userName = dbUser.Name;
+            }
+
+            var quiz = await dbContext.Quizzes.FirstOrDefaultAsync(q => q.Category == session.Category && q.Difficulty == session.Difficulty);
+            if (quiz != null)
+            {
+                var attempt = new QuizAttempt
+                {
+                    QuizId = quiz.Id,
+                    UserName = userName,
+                    ScorePercentage = percentage,
+                    CompletedAt = DateTime.UtcNow
+                };
+                dbContext.QuizAttempts.Add(attempt);
+                await dbContext.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error saving quiz attempt to database during quiz completion");
         }
 
         string resultMsg = $"🎉 <b>TEST YAKUNLANDI!</b>\n\n" +
                            $"👤 <b>Dasturchi:</b> {userName}\n" +
                            $"📚 <b>Bo'lim:</b> {session.Category.ToUpper()} ({session.Difficulty})\n" +
                            $"🎯 <b>Natija:</b> {correct} / {total} ball ({Math.Round(percentage, 1)}%)\n\n" +
-                           $"🏆 <i>Natijangiz reyting bazasiga saqlandi!</i>\n\n" +
+                           $"🏆 <i>Natijangiz saqlandi!</i>\n\n" +
                            $"Qayta test topshirish uchun /quiz buyrug'ini bosing.";
 
         await _botClient.SendTextMessageAsync(
