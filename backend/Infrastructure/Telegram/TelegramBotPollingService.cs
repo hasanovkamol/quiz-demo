@@ -34,10 +34,19 @@ public class TelegramBotPollingService : BackgroundService
                 new BotCommand { Command = "stats", Description = "Shaxsiy statistikangiz" },
                 new BotCommand { Command = "leaderboard", Description = "Top dasturchilar reytingi" }
             }, cancellationToken: stoppingToken);
+
+            // Clean up and overwrite any old/spam description on the bot profile
+            await _botClient.SetMyDescriptionAsync(
+                "QuizMaster PRO — Senior .NET va IT dasturchilar uchun 720 ta interaktiv testlar va bilimni baholash bot-platformasi. 🇺🇿",
+                cancellationToken: stoppingToken);
+
+            await _botClient.SetMyShortDescriptionAsync(
+                "QuizMaster PRO — Senior .NET & IT Quiz Bot",
+                cancellationToken: stoppingToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not register BotCommands menu");
+            _logger.LogWarning(ex, "Could not update Bot profile metadata / commands");
         }
 
         var receiverOptions = new ReceiverOptions
