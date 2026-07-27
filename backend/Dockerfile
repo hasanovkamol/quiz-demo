@@ -14,4 +14,4 @@ RUN apt-get update && apt-get install -y curl bash && \
 COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000
-ENTRYPOINT ["infisical", "run", "--", "dotnet", "QuizApi.dll"]
+ENTRYPOINT ["dotnet", "QuizApi.dll"]
