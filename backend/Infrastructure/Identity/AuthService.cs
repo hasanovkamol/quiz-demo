@@ -50,6 +50,8 @@ public class AuthService(
         }
 
         var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+        bool isAdmin = string.Equals(email, "khasanovkamol3834@gmail.com", StringComparison.OrdinalIgnoreCase);
+        
         if (user == null)
         {
             user = new User
@@ -59,7 +61,7 @@ public class AuthService(
                 Email = email,
                 Name = name,
                 PictureUrl = pictureUrl,
-                Role =  "User",
+                Role = isAdmin ? "Admin" : "User",
                 CreatedAt = DateTime.UtcNow,
                 LastLoginAt = DateTime.UtcNow
             };
@@ -70,6 +72,7 @@ public class AuthService(
             user.LastLoginAt = DateTime.UtcNow;
             if (!string.IsNullOrWhiteSpace(name)) user.Name = name;
             if (!string.IsNullOrWhiteSpace(pictureUrl)) user.PictureUrl = pictureUrl;
+            if (isAdmin && user.Role != "Admin") user.Role = "Admin";
         }
 
         await dbContext.SaveChangesAsync();
