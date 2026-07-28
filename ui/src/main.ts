@@ -11,11 +11,11 @@ fetch('config.json')
     // AppConfigService singleton window.__APP_CONFIG__ dan o'qiydi
     (window as any).__APP_CONFIG__ = cfg;
 
-    // 2. Keycloak ni Angular bootstrap'dan OLDIN ishga tushiramiz
+    // 2. Keycloak ni Angular bootstrap'dan OLDIN bloklamaydigan qilib (orqa fonda) ishga tushiramiz
     if (cfg.keycloak) {
       const kc = new KeycloakService();
       (window as any).__KEYCLOAK_SERVICE__ = kc;
-      await kc.init(cfg.keycloak);
+      kc.init(cfg.keycloak).catch(err => console.error('[main] Keycloak init failed:', err));
     }
 
     // 3. Angular ilovasini ishga tushiramiz
