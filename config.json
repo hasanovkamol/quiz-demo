@@ -1,7 +1,7 @@
 {
-  "apiUrl": "/api",
+  "apiUrl": "https://seeking-dial-camcorders-screen.trycloudflare.com/api",
   "keycloak": {
-    "url": "/auth",
+    "url": "https://seeking-dial-camcorders-screen.trycloudflare.com/auth",
     "realm": "quizmaster-realm",
     "clientId": "quizmaster-app"
   }
