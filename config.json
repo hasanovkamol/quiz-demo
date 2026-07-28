@@ -1,7 +1,7 @@
 {
-  "apiUrl": " https://teachers-boolean-furniture-brush.trycloudflare.com/api",
+  "apiUrl": "https://api.hasanov.uz/api",
   "keycloak": {
-    "url": " https://teachers-boolean-furniture-brush.trycloudflare.com/auth",
+    "url": "https://api.hasanov.uz/auth",
     "realm": "quizmaster-realm",
     "clientId": "quizmaster-app"
   }
