@@ -256,6 +256,80 @@ public class TelegramBotService
                 await StartSequentialQuizSessionAsync(userId, chatId, category, difficulty);
             }
         }
+        else if (data.StartsWith("ans:"))
+        {
+            var parts = data.Split(':');
+            if (parts.Length >= 3 && int.TryParse(parts[1], out int qIndex) && int.TryParse(parts[2], out int optIndex))
+            {
+                if (_activeSessions.TryGetValue(userId, out var session))
+                {
+                    if (qIndex != session.CurrentIndex)
+                    {
+                        await _botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "⚠️ Bu javob eskirgan.");
+                        return;
+                    }
+
+                    var question = session.Questions[session.CurrentIndex];
+                    if (optIndex >= 0 && optIndex < question.Options.Count)
+                    {
+                        var chosenOption = question.Options[optIndex];
+                        bool isCorrect = chosenOption.Id.ToString() == question.CorrectOptionId;
+
+                        if (isCorrect)
+                        {
+                            session.CorrectAnswersCount++;
+                        }
+
+                        // Record user details in DB
+                        try
+                        {
+                            using var scope = _serviceProvider.CreateScope();
+                            var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+                            if (dbContext.Database.IsNpgsql())
+                            {
+                                await dbContext.Database.ExecuteSqlRawAsync(
+                                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
+                                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
+                            }
+
+                            var tgUser = callbackQuery.From;
+                            var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == tgUser.Id);
+                            if (dbUser == null)
+                            {
+                                dbUser = new UserEntity
+                                {
+                                    Id = Guid.NewGuid(),
+                                    Email = $"{tgUser.Id}@telegram.user",
+                                    Name = $"{tgUser.FirstName} {tgUser.LastName}".Trim(),
+                                    TelegramUserId = tgUser.Id,
+                                    TelegramUsername = tgUser.Username
+                                };
+                                dbContext.Users.Add(dbUser);
+                                await dbContext.SaveChangesAsync();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Error updating Telegram user");
+                        }
+
+                        string feedback = isCorrect
+                            ? $"✅ <b>TO'G'RI JAVOB!</b>\n\n💡 <b>Tushuntirish:</b> {HtmlEncode(question.Explanation)}"
+                            : $"❌ <b>XATO JAVOB!</b>\n\n💡 <b>Tushuntirish:</b> {HtmlEncode(question.Explanation)}";
+
+                        await _botClient.SendTextMessageAsync(
+                            chatId: chatId,
+                            text: feedback,
+                            parseMode: ParseMode.Html
+                        );
+
+                        session.CurrentIndex++;
+                        await Task.Delay(800);
+                        await SendNextPollInSessionAsync(session);
+                    }
+                }
+            }
+        }
         else if (data.StartsWith("respage:"))
         {
             var parts = data.Split(':');
@@ -267,6 +341,12 @@ public class TelegramBotService
         }
 
         await _botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
+    }
+
+    private static string HtmlEncode(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        return text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
     }
 
     private async Task StartSequentialQuizSessionAsync(long userId, long chatId, string category, string difficulty)
@@ -328,50 +408,53 @@ public class TelegramBotService
 
         var question = session.Questions[session.CurrentIndex];
 
-        var optionsTexts = question.Options
-            .Select(o => o.Text.Length > 98 ? o.Text.Substring(0, 95) + "..." : o.Text)
-            .ToList();
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"❓ <b>[{session.CurrentIndex + 1}/{session.Questions.Count}] SAVOL:</b>");
+        sb.AppendLine($"<b>{HtmlEncode(question.Text)}</b>\n");
 
-        int correctIndex = 0;
+        if (!string.IsNullOrWhiteSpace(question.CodeSnippet))
+        {
+            sb.AppendLine($"<code>{HtmlEncode(question.CodeSnippet)}</code>\n");
+        }
+
+        var optionLetters = new[] { "A", "B", "C", "D", "E", "F", "G", "H" };
+        var keyboardButtons = new List<InlineKeyboardButton>();
+
         for (int i = 0; i < question.Options.Count; i++)
         {
-            if (question.Options[i].Id.ToString() == question.CorrectOptionId)
+            var letter = i < optionLetters.Length ? optionLetters[i] : $"{i + 1}";
+            var optionText = question.Options[i].Text;
+            sb.AppendLine($"<b>{letter})</b> {HtmlEncode(optionText)}\n");
+
+            keyboardButtons.Add(InlineKeyboardButton.WithCallbackData($"[ {letter} ]", $"ans:{session.CurrentIndex}:{i}"));
+        }
+
+        sb.AppendLine("👇 <i>To'g'ri deb hisoblagan variantingizni bosing:</i>");
+
+        var buttonsLayout = new List<List<InlineKeyboardButton>>();
+        var row = new List<InlineKeyboardButton>();
+        foreach (var btn in keyboardButtons)
+        {
+            row.Add(btn);
+            if (row.Count == 4)
             {
-                correctIndex = i;
-                break;
+                buttonsLayout.Add(row);
+                row = new List<InlineKeyboardButton>();
             }
         }
-
-        string explanation = question.Explanation;
-        if (explanation.Length > 195)
+        if (row.Any())
         {
-            explanation = explanation.Substring(0, 192) + "...";
+            buttonsLayout.Add(row);
         }
 
-        string questionTitle = $"[{session.CurrentIndex + 1}/{session.Questions.Count}] {question.Text}";
-        if (questionTitle.Length > 300)
-        {
-            questionTitle = questionTitle.Substring(0, 295) + "...";
-        }
+        var inlineKeyboard = new InlineKeyboardMarkup(buttonsLayout);
 
-        var message = await _botClient.SendPollAsync(
+        await _botClient.SendTextMessageAsync(
             chatId: session.ChatId,
-            question: questionTitle,
-            options: optionsTexts,
-            type: PollType.Quiz,
-            correctOptionId: correctIndex,
-            explanation: explanation,
-            isAnonymous: false
+            text: sb.ToString(),
+            parseMode: ParseMode.Html,
+            replyMarkup: inlineKeyboard
         );
-
-        if (message.Poll != null)
-        {
-            _activePolls[message.Poll.Id] = new PollInfo
-            {
-                UserId = session.UserId,
-                CorrectOptionId = correctIndex
-            };
-        }
     }
 
     private async Task HandlePollAnswerAsync(PollAnswer pollAnswer)
