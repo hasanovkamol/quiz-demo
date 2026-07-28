@@ -34,9 +34,9 @@ jobs:
         run: |
           cat > ui/public/config.json << EOF
           {
-            "apiUrl": "${{ secrets.BACKEND_URL }}/api",
+            "apiUrl": "https://hasanovkamol.github.io/quiz-demo/api",
             "keycloak": {
-              "url": "${{ secrets.BACKEND_URL }}/auth",
+              "url": "https://hasanovkamol.github.io/quiz-demo/auth",
               "realm": "quizmaster-realm",
               "clientId": "quizmaster-app"
             }
