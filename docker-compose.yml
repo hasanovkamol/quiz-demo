@@ -138,7 +138,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: quiz_cloudflare_tunnel
     restart: unless-stopped
-    command: tunnel --no-autoupdate --url http://gateway:80
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
       - quiz-net
     depends_on:
