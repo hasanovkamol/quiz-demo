@@ -19,6 +19,7 @@ QuizMaster PRO is an enterprise-grade, microservice-ready Full-Stack assessment 
 8. **Nginx API Reverse Proxy for UI**: Dedicated [`ui/nginx.conf`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/nginx.conf) with `/api/` proxying to `http://backend:5000/api/` enabling both port `8081` and Gateway port `80` access.
 9. **EF Core Model Relationships & Migration**: Resolved `FK_QuestionOptions_Questions_QuestionId1` shadow property bug via explicit `.WithOne(o => o.Question)` and `.WithOne(u => u.Attempt)` EF Core mappings and migration `FixShadowPropertiesFK`.
 10. **Single Root Command Test Execution**: `npm run test` automatically executes both Angular UI tests (31/31 passed) and Backend Integration tests (7/7 passed).
+11. **Senior ASP.NET Core 100 ABCD Quiz Seeder**: [`Seeder_SeniorAspNetCore.cs`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Infrastructure/Persistence/Seeding/Seeder_SeniorAspNetCore.cs) — 100 ta senior darajadagi ABCD test savoli 8 ta bo'limga bo'lingan (C# Asoslari, ASP.NET Core, Web API, EF Core, Logging, Xavfsizlik, Arxitektura, Testing/DevOps).
 
 ---
 

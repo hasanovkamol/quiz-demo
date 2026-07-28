@@ -16,6 +16,7 @@ public static partial class ComprehensiveQuizSeeder
         quizzes.AddRange(GetArchitectureQuizzes());
         quizzes.AddRange(GetMessagingQuizzes());
         quizzes.AddRange(GetDevOpsQuizzes());
+        quizzes.AddRange(GetSeniorAspNetCoreQuizzes());
 
         return quizzes;
     }
