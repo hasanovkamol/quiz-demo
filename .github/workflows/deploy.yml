@@ -30,20 +30,6 @@ jobs:
       - name: Install UI Dependencies
         run: npm --prefix ui install --legacy-peer-deps
 
-      - name: Create runtime config.json with backend URL
-        if: "${{ secrets.BACKEND_URL != '' }}"
-        run: |
-          cat > ui/public/config.json << EOF
-          {
-            "apiUrl": "${{ secrets.BACKEND_URL }}/api",
-            "keycloak": {
-              "url": "${{ secrets.BACKEND_URL }}/auth",
-              "realm": "quizmaster-realm",
-              "clientId": "quizmaster-app"
-            }
-          }
-          EOF
-
       - name: Build Angular SPA for Production
         run: npm --prefix ui run build -- --base-href /quiz-demo/
 
