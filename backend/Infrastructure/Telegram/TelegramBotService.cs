@@ -123,21 +123,9 @@ public class TelegramBotService
             });
         }
 
-        buttons.Add(new List<InlineKeyboardButton>
-        {
-            InlineKeyboardButton.WithCallbackData("⚡ ASP.NET Core", "cat:dotnet"),
-            InlineKeyboardButton.WithCallbackData("🗄️ EF Core", "cat:efcore"),
-        });
-        buttons.Add(new List<InlineKeyboardButton>
-        {
-            InlineKeyboardButton.WithCallbackData("💾 Databases", "cat:database"),
-            InlineKeyboardButton.WithCallbackData("🅰️ Angular", "cat:angular"),
-        });
-        buttons.Add(new List<InlineKeyboardButton>
-        {
-            InlineKeyboardButton.WithCallbackData("💻 C# & CLR", "cat:csharp"),
-            InlineKeyboardButton.WithCallbackData("🏛️ Architecture", "cat:architecture"),
-        });
+        var dynamicKeyboard = await GetDynamicCategoryKeyboardAsync();
+        buttons.AddRange(dynamicKeyboard.InlineKeyboard.Select(r => r.ToList()));
+
         buttons.Add(new List<InlineKeyboardButton>
         {
             InlineKeyboardButton.WithCallbackData("📋 Natijalar Tarixi", "respage:1:all"),
@@ -148,7 +136,7 @@ public class TelegramBotService
 
         string welcomeText = $"<b>Assalomu alaykum, {name}!</b> 🇺🇿\n\n" +
                              $"<b>QuizMaster PRO</b> botiga xush kelibsiz!\n" +
-                             $"Ushbu bot orqali siz IT sohasidagi 720 ta senior darajadagi professional testlarni topshirishingiz va o'z natijalaringiz tarixini ko'rishingiz mumkin.\n\n" +
+                             $"Ushbu bot orqali siz IT sohasidagi barcha senior darajadagi professional testlarni topshirishingiz va o'z natijalaringiz tarixini ko'rishingiz mumkin.\n\n" +
                              $"👇 <b>Kategoriyani tanlang yoki buyruqlardan foydalaning:</b>";
 
         await _botClient.SendTextMessageAsync(
@@ -161,29 +149,7 @@ public class TelegramBotService
 
     private async Task SendCategorySelectionAsync(long chatId)
     {
-        var inlineKeyboard = new InlineKeyboardMarkup(new[]
-        {
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("⚡ ASP.NET Core", "cat:dotnet"),
-                InlineKeyboardButton.WithCallbackData("🗄️ EF Core", "cat:efcore"),
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("💾 Databases", "cat:database"),
-                InlineKeyboardButton.WithCallbackData("🅰️ Angular", "cat:angular"),
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("💻 C# & CLR", "cat:csharp"),
-                InlineKeyboardButton.WithCallbackData("🏛️ Architecture", "cat:architecture"),
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("📬 Messaging", "cat:messaging"),
-                InlineKeyboardButton.WithCallbackData("🐳 DevOps", "cat:devops"),
-            }
-        });
+        var inlineKeyboard = await GetDynamicCategoryKeyboardAsync();
 
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
@@ -191,6 +157,51 @@ public class TelegramBotService
             parseMode: ParseMode.Markdown,
             replyMarkup: inlineKeyboard
         );
+    }
+
+    private async Task<InlineKeyboardMarkup> GetDynamicCategoryKeyboardAsync()
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+
+        var categories = await dbContext.Quizzes
+            .Select(q => new { q.Category, q.CategoryName })
+            .Distinct()
+            .ToListAsync();
+
+        var buttons = new List<List<InlineKeyboardButton>>();
+        var row = new List<InlineKeyboardButton>();
+
+        foreach (var cat in categories)
+        {
+            var icon = cat.Category switch
+            {
+                "dotnet" => "⚡",
+                "efcore" => "🗄️",
+                "database" => "💾",
+                "angular" => "🅰️",
+                "csharp" => "💻",
+                "architecture" => "🏛️",
+                "messaging" => "📬",
+                "devops" => "🐳",
+                "senior-aspnetcore" => "🚀",
+                _ => "🔥"
+            };
+
+            row.Add(InlineKeyboardButton.WithCallbackData($"{icon} {cat.CategoryName}", $"cat:{cat.Category}"));
+            if (row.Count == 2)
+            {
+                buttons.Add(row);
+                row = new List<InlineKeyboardButton>();
+            }
+        }
+
+        if (row.Any())
+        {
+            buttons.Add(row);
+        }
+
+        return new InlineKeyboardMarkup(buttons);
     }
 
     private async Task HandleCallbackQueryAsync(CallbackQuery callbackQuery)
@@ -224,6 +235,7 @@ public class TelegramBotService
                 new[]
                 {
                     InlineKeyboardButton.WithCallbackData("🔴 Qiyin (Hard)", $"startquiz:{category}:Hard"),
+                    InlineKeyboardButton.WithCallbackData("🌟 Barcha Savollar (All)", $"startquiz:{category}:All"),
                 }
             });
 
@@ -262,20 +274,27 @@ public class TelegramBotService
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
 
-        var quiz = await dbContext.Quizzes
+        var query = dbContext.Quizzes
             .Include(q => q.Questions)
             .ThenInclude(q => q.Options)
-            .Where(q => q.Category == category && q.Difficulty == difficulty)
-            .FirstOrDefaultAsync();
+            .Where(q => q.Category == category);
 
-        if (quiz == null || !quiz.Questions.Any())
+        if (!string.Equals(difficulty, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(q => q.Difficulty == difficulty);
+        }
+
+        var quizzes = await query.ToListAsync();
+        var allQuestions = quizzes.SelectMany(q => q.Questions).ToList();
+
+        if (!allQuestions.Any())
         {
             await _botClient.SendTextMessageAsync(chatId, "❌ Ushbu bo'lim bo'yicha savollar topilmadi.");
             return;
         }
 
         var random = new Random();
-        var selectedQuestions = quiz.Questions.OrderBy(_ => random.Next()).Take(5).ToList();
+        var selectedQuestions = allQuestions.OrderBy(_ => random.Next()).ToList();
 
         var session = new ActiveQuizSession
         {
@@ -292,7 +311,7 @@ public class TelegramBotService
 
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
-            text: $"🚀 **{category.ToUpper()} ({difficulty})** bo'yicha 5 ta ketma-ket savoldan iborat test boshlandi!\n\nBirinchi savol yuborilmoqda...",
+            text: $"🚀 **{category.ToUpper()} ({difficulty})** bo'yicha {selectedQuestions.Count} ta savoldan iborat to'liq test boshlandi!\n\nBirinchi savol yuborilmoqda...",
             parseMode: ParseMode.Markdown
         );
 
