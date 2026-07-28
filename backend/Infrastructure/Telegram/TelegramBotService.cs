@@ -395,15 +395,22 @@ public class TelegramBotService
 
             if (dbUser == null)
             {
+                bool isAdmin = string.Equals(tgUser.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase);
                 dbUser = new UserEntity
                 {
                     TelegramUserId = tgUser.Id,
                     TelegramUsername = tgUser.Username,
                     Name = $"{tgUser.FirstName} {tgUser.LastName}".Trim(),
                     Email = $"{tgUser.Id}@telegram.user",
-                    Role = "User"
+                    Role = isAdmin ? "Admin" : "User"
                 };
                 dbContext.Users.Add(dbUser);
+                await dbContext.SaveChangesAsync();
+            }
+            else if (string.Equals(tgUser.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase) && dbUser.Role != "Admin")
+            {
+                dbUser.Role = "Admin";
+                dbUser.TelegramUsername = tgUser.Username;
                 await dbContext.SaveChangesAsync();
             }
         }

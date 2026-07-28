@@ -35,15 +35,22 @@ public static class TelegramEndpoints
             var user = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == request.TelegramUserId);
             if (user == null)
             {
+                bool isAdmin = string.Equals(request.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase);
                 user = new UserEntity
                 {
                     TelegramUserId = request.TelegramUserId,
                     TelegramUsername = request.Username,
                     Name = string.IsNullOrWhiteSpace(request.Name) ? "Telegram User" : request.Name,
                     Email = $"{request.TelegramUserId}@telegram.user",
-                    Role = "User"
+                    Role = isAdmin ? "Admin" : "User"
                 };
                 dbContext.Users.Add(user);
+                await dbContext.SaveChangesAsync();
+            }
+            else if (string.Equals(request.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase) && user.Role != "Admin")
+            {
+                user.Role = "Admin";
+                user.TelegramUsername = request.Username;
                 await dbContext.SaveChangesAsync();
             }
 
