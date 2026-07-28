@@ -1,7 +1,7 @@
 {
-  "apiUrl": "https://api.hasanov.uz/api",
+  "apiUrl": "https://effectiveness-curriculum-injection-conditioning.trycloudflare.com/api",
   "keycloak": {
-    "url": "https://api.hasanov.uz/auth",
+    "url": "https://effectiveness-curriculum-injection-conditioning.trycloudflare.com/auth",
     "realm": "quizmaster-realm",
     "clientId": "quizmaster-app"
   }
