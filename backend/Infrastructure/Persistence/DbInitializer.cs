@@ -34,8 +34,9 @@ public static class DbInitializer
             }
         }
 
-        // Seed 720 comprehensive questions if DB has fewer than 20 quizzes
-        if (await context.Quizzes.CountAsync() < 20)
+        // Agar bazadagi testlar soni kodimizdagi jami testlar sonidan kam bo'lsa, qayta yozamiz
+        var totalExpected = ComprehensiveQuizSeeder.GetComprehensiveQuizzes().Count;
+        if (await context.Quizzes.CountAsync() < totalExpected)
         {
             await SeedComprehensiveQuizzesAsync(context);
         }
