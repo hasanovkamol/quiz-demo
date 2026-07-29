@@ -79,29 +79,50 @@ public class TelegramBotService
         }
     }
 
+    public static ReplyKeyboardMarkup GetPersistentTabKeyboard()
+    {
+        return new ReplyKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                new KeyboardButton("🚀 Test Yechish (/quiz)"),
+                new KeyboardButton("📋 Natijalarim (/results)")
+            },
+            new[]
+            {
+                new KeyboardButton("📊 Statistikam (/stats)"),
+                new KeyboardButton("🏆 Reyting (/leaderboard)")
+            }
+        })
+        {
+            ResizeKeyboard = true,
+            IsPersistent = true
+        };
+    }
+
     private async Task HandleMessageAsync(Message message)
     {
         var chatId = message.Chat.Id;
         var userId = message.From?.Id ?? 0;
         var text = message.Text?.Trim() ?? "";
 
-        if (text.StartsWith("/start"))
+        if (text.StartsWith("/start") || text.Equals("🔄 Qayta boshlash", StringComparison.OrdinalIgnoreCase))
         {
             await SendWelcomeMessageAsync(chatId, userId, message.From?.FirstName ?? "Dasturchi");
         }
-        else if (text.StartsWith("/quiz"))
+        else if (text.StartsWith("/quiz") || text.Contains("Test Yechish") || text.Contains("Test topshirish"))
         {
             await SendCategorySelectionAsync(chatId, userId);
         }
-        else if (text.StartsWith("/results"))
+        else if (text.StartsWith("/results") || text.Contains("Natijalarim") || text.Contains("Natijalar tarixi"))
         {
             await SendUserResultsHistoryAsync(chatId, userId, page: 1, selectedCategory: "all");
         }
-        else if (text.StartsWith("/stats"))
+        else if (text.StartsWith("/stats") || text.Contains("Statistikam") || text.Contains("Shaxsiy statistika"))
         {
             await SendUserStatsAsync(chatId, message.From);
         }
-        else if (text.StartsWith("/leaderboard"))
+        else if (text.StartsWith("/leaderboard") || text.Contains("Reyting") || text.Contains("Leaderboard"))
         {
             await SendLeaderboardAsync(chatId, message.From);
         }
@@ -109,8 +130,9 @@ public class TelegramBotService
         {
             await _botClient.SendTextMessageAsync(
                 chatId: chatId,
-                text: "📌 **Buyruqlar ro'yxati:**\n\n/quiz — Test ishlashni boshlash\n/results — Natijalaringiz tarixi (Pagination)\n/stats — Shaxsiy statistikangiz\n/leaderboard — Top dasturchilar reytingi",
-                parseMode: ParseMode.Markdown
+                text: "📌 **Buyruqlar va Tab Menyusi:**\n\n/quiz — Test ishlashni boshlash\n/results — Natijalaringiz tarixi\n/stats — Shaxsiy statistikangiz\n/leaderboard — Top dasturchilar reytingi",
+                parseMode: ParseMode.Markdown,
+                replyMarkup: GetPersistentTabKeyboard()
             );
         }
     }
@@ -143,13 +165,21 @@ public class TelegramBotService
         string welcomeText = $"<b>Assalomu alaykum, {name}!</b> 🇺🇿\n\n" +
                              $"<b>QuizMaster PRO</b> botiga xush kelibsiz!\n" +
                              $"Ushbu bot orqali siz IT sohasidagi barcha senior darajadagi professional testlarni topshirishingiz va o'z natijalaringiz tarixini ko'rishingiz mumkin.\n\n" +
-                             $"👇 <b>Kategoriyani tanlang yoki buyruqlardan foydalaning:</b>";
+                             $"👇 <b>Kategoriyani tanlang yoki quyidagi Tab menyusidan foydalaning:</b>";
 
+        // Send persistent Tab Menu keyboard
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
             text: welcomeText,
             parseMode: ParseMode.Html,
             replyMarkup: inlineKeyboard
+        );
+
+        // Also ensure bottom persistent tab bar is displayed
+        await _botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: "💬 Pastdagi Tab tugmalari orqali tezkor buyruqlarni berishingiz mumkin:",
+            replyMarkup: GetPersistentTabKeyboard()
         );
     }
 
