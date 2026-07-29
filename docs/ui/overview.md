@@ -33,4 +33,6 @@ The application utilizes Angular's latest **Signals** reactivity model (`signal`
 1. **Category Management (`categories` tab)**: Admin creates new categories dynamically (`id`, `name`, `iconName`, `description`). New categories automatically appear in all filter pills and dropdowns across the application.
 2. **AI Single Question & 1-Click Insert (`ai-single` tab)**: Generates 1 targeted AI question with options & explanation, presents a live preview card, and inserts directly into a selected Quiz with 1-click (`addQuestionToQuiz`).
 3. **Quiz Creator Line-Item AI Suggestion**: In [`QuizCreatorComponent`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/quiz-creator/quiz-creator.component.ts), each question item features an `"⚡ AI Taklifi Bilan To'ldirish"` button to auto-fill questions on the fly.
+4. **Markdown (.md) File & Text Import (`md-import` tab)**: In [`AdminDashboardComponent`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/admin/admin-dashboard.component.ts), Admins can drag & drop `.md` files or paste raw Markdown text, preview parsed questions/code snippets/options, and save directly to database via high-performance bulk insert.
+
 

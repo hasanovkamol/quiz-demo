@@ -46,3 +46,12 @@ public record CategoryDto(
     string Description
 );
 
+public record ImportMarkdownQuizRequestDto(
+    string MarkdownText,
+    string? Title,
+    string? Category,
+    string? CategoryName,
+    string? Difficulty
+);
+
+

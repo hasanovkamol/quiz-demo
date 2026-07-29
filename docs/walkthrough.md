@@ -22,14 +22,16 @@ QuizMaster PRO is an enterprise-grade, microservice-ready Full-Stack assessment 
 11. **Senior ASP.NET Core 100 ABCD Quiz Seeder**: [`Seeder_SeniorAspNetCore.cs`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Infrastructure/Persistence/Seeding/Seeder_SeniorAspNetCore.cs) — 100 ta senior darajadagi ABCD test savoli 8 ta bo'limga bo'lingan (C# Asoslari, ASP.NET Core, Web API, EF Core, Logging, Xavfsizlik, Arxitektura, Testing/DevOps).
 12. **Admin Category Creation & Management**: Dynamic category registration (`POST /api/admin/categories`, `GET /api/admin/categories`). Yaratilgan yangi kategoriyalar darhol Quiz List filter pills, Quiz Creator dropdown va AI Generator dropdownlarida aks etadi.
 13. **1-Click AI Single Question Generator & Direct Insert**: [`AdminDashboardComponent`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/admin/admin-dashboard.component.ts) va [`QuizCreatorComponent`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/quiz-creator/quiz-creator.component.ts) platformasida AI yordamida savollarni bitta-bitta shakllantirish, savol/javoblarni ko'rib chiqish va 1-click bilan muayyan testga insert qilib saqlash imkoniyati.
+14. **Admin Markdown (.md) File & Text Import (Dynamic Category & Bulk Insert)**: [`MarkdownQuizParserService.cs`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Infrastructure/Services/MarkdownQuizParserService.cs) — Static `switch-case` to'liq olib tashlandi. Admin UI da tanlangan dinamik Kategoriya ID si (`Category`) va Kategoriya Nomi (`CategoryName`) hamda Test Nomi va Qiyinchilik darajasi 100% dinamik ravishda backend parsing va bazaga saqlash jarayonida qo'llaniladi.
 
 ---
 
 ## 🧪 Verification & Build Status
 
 - **Role Portal Segregation**: User Mode and Admin Console UI modes verified with clean switcher.
-- **Root Full-Stack Test Command**: `npm run test` -> **Passed! (38/38 Total Tests Passed)**.
+- **Root Full-Stack Test Command**: `npm run test` -> **Passed! (40/40 Total Tests Passed)**.
 - **Frontend Unit & Component Tests**: `npm run test:ui` -> **Passed! (31/31 Passed, 12 Test Spec Files)**.
-- **Backend Integration Tests**: `npm run test:backend` -> **Passed! (7/7 Passed, 0 Failed)**.
+- **Backend Integration & Unit Tests**: `npm run test:backend` -> **Passed! (9/9 Passed, 0 Failed)**.
 - **Backend Build**: `cd backend && dotnet build` -> **Build Succeeded (0 Errors, 0 Warnings)**.
 - **Frontend Build**: `cd ui && npx ng build` -> **Bundle generation complete (0 Errors)**.
+

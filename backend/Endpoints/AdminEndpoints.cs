@@ -17,6 +17,16 @@ public static class AdminEndpoints
         new("custom", "Maxsus Testlar", "sparkles", "Admin tomonidan yaratilgan maxsus testlar")
     ];
 
+    public static string GetCategoryNameById(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return "Maxsus Markdown Test";
+        lock (CategoriesStore)
+        {
+            var cat = CategoriesStore.FirstOrDefault(c => string.Equals(c.Id, id, StringComparison.OrdinalIgnoreCase));
+            return cat?.Name ?? id;
+        }
+    }
+
     public static RouteGroupBuilder MapAdminEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/admin")
@@ -117,6 +127,61 @@ public static class AdminEndpoints
             return TypedResults.Created($"/api/quizzes/{quizId}/questions/{question.Id}", question);
         })
         .WithSummary("Testga bitta savolni to'g'ridan-to'g'ri qo'shish (1-Click Insert)");
+
+        // 5. Parse Markdown Preview
+        group.MapPost("/parse-markdown-preview", Results<Ok<Quiz>, BadRequest<object>> (
+            ImportMarkdownQuizRequestDto request,
+            IMarkdownQuizParserService parserService) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.MarkdownText))
+            {
+                return TypedResults.BadRequest<object>(new { message = "Iltimos, Markdown matnini kiriting!" });
+            }
+
+            try
+            {
+                var quiz = parserService.ParseMarkdownToQuiz(request.MarkdownText, request.Title, request.Category, request.CategoryName, request.Difficulty);
+                return TypedResults.Ok(quiz);
+            }
+            catch (Exception ex)
+            {
+                return TypedResults.BadRequest<object>(new { message = "Markdown parsing xatosi: " + ex.Message });
+            }
+        })
+        .WithSummary("Markdown textini parse qilib, saqlashdan oldin prevyu olish");
+
+        // 6. Import Markdown Quiz to Database (Optimized Bulk Insert)
+        group.MapPost("/import-markdown", async Task<Results<Created<Quiz>, BadRequest<object>>> (
+            ImportMarkdownQuizRequestDto request,
+            IMarkdownQuizParserService parserService,
+            QuizDbContext dbContext) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.MarkdownText))
+            {
+                return TypedResults.BadRequest<object>(new { message = "Iltimos, Markdown matnini kiriting!" });
+            }
+
+            try
+            {
+                var quiz = parserService.ParseMarkdownToQuiz(request.MarkdownText, request.Title, request.Category, request.CategoryName, request.Difficulty);
+
+                if (quiz.Questions.Count == 0)
+                {
+                    return TypedResults.BadRequest<object>(new { message = "Markdown matnidan birorta ham test savoli aniqlanmadi. Formatni tekshiring!" });
+                }
+
+                dbContext.Quizzes.Add(quiz);
+                await dbContext.SaveChangesAsync();
+
+                return TypedResults.Created($"/api/quizzes/{quiz.Id}", quiz);
+            }
+            catch (Exception ex)
+            {
+                return TypedResults.BadRequest<object>(new { message = "Markdown import xatosi: " + ex.Message });
+            }
+        })
+        .WithSummary("Markdown fayl/matnidan test va savollarni ma'lumotlar bazasiga optimallashtirilgan holatda saqlash (Bulk Insert)");
+
 
         // 5. Seed 720 questions
         group.MapPost("/seed-720-questions", async (QuizDbContext dbContext) =>

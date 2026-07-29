@@ -10,6 +10,7 @@ using QuizApi.Endpoints;
 using QuizApi.Infrastructure.Ai;
 using QuizApi.Infrastructure.Identity;
 using QuizApi.Infrastructure.Persistence;
+using QuizApi.Infrastructure.Services;
 using QuizApi.Infrastructure.Telegram;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -91,6 +92,7 @@ if (builder.Environment.EnvironmentName != "Testing")
 builder.Services.AddHttpClient<IKeycloakService, KeycloakService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISemanticKernelQuizService, SemanticKernelQuizService>();
+builder.Services.AddScoped<IMarkdownQuizParserService, MarkdownQuizParserService>();
 
 var app = builder.Build();
 

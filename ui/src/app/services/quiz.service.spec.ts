@@ -39,6 +39,8 @@ describe('QuizService Unit Tests', () => {
       createCategory: (c: any) => of(c),
       generateAiQuestion: () => of({}),
       addQuestionToQuiz: () => of({}),
+      previewMarkdownQuiz: () => of({}),
+      importMarkdownQuiz: () => of({}),
       submitAttempt: () => of({})
     };
 

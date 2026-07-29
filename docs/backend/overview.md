@@ -36,6 +36,8 @@ backend/
 | `/api/admin/categories` | `GET` | Public/Admin | List all system & custom categories |
 | `/api/admin/categories` | `POST` | Admin | Create a new custom category |
 | `/api/admin/quizzes/{quizId}/questions` | `POST` | Admin | Direct 1-Click insert of a question into a quiz |
+| `/api/admin/parse-markdown-preview` | `POST` | Admin | Preview parsed Markdown quiz questions before saving |
+| `/api/admin/import-markdown` | `POST` | Admin | Optimized bulk insert of Markdown quiz questions to DB |
 | `/api/admin/stats` | `GET` | Admin | Get system metrics (total quizzes, attempts, avg score) |
 | `/api/auth/google-login` | `POST` | Public | Authenticate with Google ID Token & issue 5-min JWT |
 | `/api/auth/refresh` | `POST` | Public | Refresh 5-minute Access Token using Refresh Token |

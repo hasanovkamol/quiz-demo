@@ -103,7 +103,7 @@ JSON Formati:
                 {
                     var builder = Kernel.CreateBuilder();
                     builder.AddGoogleAIGeminiChatCompletion(
-                        modelId: "gemini-1.5-flash",
+                        modelId: "gemini-3.6-flash",
                         apiKey: apiKey
                     );
                     var kernel = builder.Build();

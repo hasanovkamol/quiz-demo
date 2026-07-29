@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { QuizApiService } from '../../services/quiz-api.service';
 import { QuizService } from '../../services/quiz.service';
 import { AuthService } from '../../services/auth.service';
-import { QuizAttempt, Question, Difficulty, CategoryItem } from '../../models/quiz.model';
+import { QuizAttempt, Question, Difficulty, CategoryItem, Quiz } from '../../models/quiz.model';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -85,6 +85,17 @@ import { QuizAttempt, Question, Difficulty, CategoryItem } from '../../models/qu
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
               Kategoriya Yaratish
+            </button>
+
+            <button 
+              (click)="activeTab.set('md-import')"
+              [class]="activeTab() === 'md-import' ? 
+                'px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 shadow-md shadow-blue-600/30 transition flex items-center gap-1.5' : 
+                'px-3.5 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition flex items-center gap-1.5'">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              📄 MD Fayl Import
             </button>
 
             <button 
@@ -423,7 +434,162 @@ import { QuizAttempt, Question, Difficulty, CategoryItem } from '../../models/qu
         </div>
       }
 
-      <!-- Tab 4: AI Full Quiz Generator -->
+      <!-- Tab 4: Markdown File/Text Import (Bulk Insert) -->
+      @if (activeTab() === 'md-import') {
+        <div class="glass-card rounded-3xl p-8 border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900/90 to-blue-950/20 shadow-2xl max-w-5xl mx-auto">
+          
+          <div class="flex items-center gap-3 mb-6 border-b border-slate-800 pb-4">
+            <div class="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-300 flex items-center justify-center font-bold shadow-lg shadow-blue-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-xl font-extrabold text-white">Markdown (.md) Fayl / Matnidan Test Import Qilish</h2>
+              <p class="text-xs text-slate-300">.md formatidagi savollar to'plamini yuklang yoki matnini nusxalab joylang (Bulk Optimized Insert).</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Side: Inputs & File Upload -->
+            <div class="space-y-4">
+              
+              <!-- File Drop Zone -->
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">📄 .md Faylni Yuklash</label>
+                <input 
+                  type="file" 
+                  accept=".md,.txt" 
+                  (change)="onFileSelected($event)" 
+                  class="w-full text-xs text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 p-2 border border-slate-800 rounded-xl">
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Test Nomi (Ixtiyoriy)</label>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="mdTitle" 
+                    placeholder="masalan: ASP.NET Core API Test" 
+                    class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Kategoriya</label>
+                  <select 
+                    [(ngModel)]="mdCategory" 
+                    class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500">
+                    @for (c of quizService.categories(); track c.id) {
+                      @if (c.id !== 'all') {
+                        <option [value]="c.id">{{ c.name }}</option>
+                      }
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Qiyinchilik</label>
+                  <select 
+                    [(ngModel)]="mdDifficulty" 
+                    class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500">
+                    <option value="Oson">Oson</option>
+                    <option value="O'rta">O'rta</option>
+                    <option value="Qiyin">Qiyin</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Direct Text Editor -->
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Markdown Matni (Paste Markdown Text)</label>
+                <textarea 
+                  [(ngModel)]="mdText" 
+                  rows="10" 
+                  placeholder="**1. ASP.NET Core qanday turdagi freymvork?**&#10;A) Faqat Windows uchun&#10;B) Cross-platform...&#10;**To'g'ri javob: B**" 
+                  class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500 leading-relaxed"></textarea>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-3">
+                <button 
+                  (click)="previewMarkdown()"
+                  [disabled]="isMdParsing()"
+                  class="w-1/2 py-3 rounded-xl text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition flex items-center justify-center gap-1.5">
+                  ⚡ Parse va Prevyu Ko'rish
+                </button>
+
+                <button 
+                  (click)="importMarkdownToDb()"
+                  [disabled]="isMdImporting() || !mdText.trim()"
+                  class="w-1/2 py-3 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-600/30 transition disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  @if (isMdImporting()) {
+                    <span>Bazaga saqlanmoqda...</span>
+                  } @else {
+                    <span>💾 Bazaga Saqlash (Bulk Insert)</span>
+                  }
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Side: Live Parsed Preview -->
+            <div>
+              <label class="block text-xs font-bold text-blue-300 uppercase tracking-wider mb-2">Parse Qilingan Test Prevyusi</label>
+              
+              @if (parsedMdQuiz()) {
+                <div class="p-5 rounded-2xl bg-slate-950 border border-blue-500/30 space-y-4 text-xs">
+                  <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                      <h3 class="text-sm font-extrabold text-white">{{ parsedMdQuiz()!.title }}</h3>
+                      <span class="text-[11px] text-slate-400">{{ parsedMdQuiz()!.categoryName }} • {{ parsedMdQuiz()!.difficulty }}</span>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      {{ parsedMdQuiz()!.questions.length }} ta savol aniqlandi
+                    </span>
+                  </div>
+
+                  <!-- Questions Scroll List -->
+                  <div class="space-y-3 max-h-[380px] overflow-y-auto pr-2 scrollbar-thin">
+                    @for (q of parsedMdQuiz()!.questions; track q.id; let idx = $index) {
+                      <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                        <div class="font-semibold text-white">
+                          <span class="text-blue-400 font-bold">#{{ idx + 1 }}</span> {{ q.text }}
+                        </div>
+
+                        @if (q.codeSnippet) {
+                          <pre class="p-2 bg-slate-950 rounded border border-slate-800 text-[11px] font-mono text-indigo-300 overflow-x-auto">{{ q.codeSnippet }}</pre>
+                        }
+
+                        <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                          @for (opt of q.options; track opt.id; let oIdx = $index) {
+                            <div class="p-1.5 rounded border flex items-center gap-1.5" [class.border-emerald-500]="opt.id === q.correctOptionId" [class.bg-emerald-500\/10]="opt.id === q.correctOptionId" [class.border-slate-800]="opt.id !== q.correctOptionId">
+                              <span class="font-bold text-slate-400">{{ getLetter(oIdx) }})</span>
+                              <span class="text-slate-200 truncate">{{ opt.text }}</span>
+                            </div>
+                          }
+                        </div>
+
+                        @if (q.explanation) {
+                          <div class="text-[10px] text-slate-400 italic">Izoh: {{ q.explanation }}</div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <div class="p-12 rounded-2xl bg-slate-950/50 border border-dashed border-slate-800 text-center text-slate-500 text-xs">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Chap tomonda .md fayl yuklang yoki markdown matnini joylab "⚡ Parse va Prevyu Ko'rish" tugmasini bosing.
+                </div>
+              }
+            </div>
+          </div>
+
+        </div>
+      }
+
+      <!-- Tab 5: AI Full Quiz Generator -->
       @if (activeTab() === 'ai-generator') {
         <div class="glass-card rounded-3xl p-8 border border-purple-500/30 bg-gradient-to-br from-slate-900 via-slate-900/90 to-purple-950/30 shadow-2xl max-w-3xl mx-auto">
           
@@ -532,13 +698,27 @@ export class AdminDashboardComponent implements OnInit {
 
   readonly openCreator = output<void>();
 
-  readonly activeTab = signal<'attempts' | 'ai-single' | 'categories' | 'ai-generator'>('attempts');
+  readonly activeTab = signal<'attempts' | 'ai-single' | 'categories' | 'md-import' | 'ai-generator'>('attempts');
   readonly userAttempts = signal<QuizAttempt[]>([]);
   readonly stats = signal<any>({ totalQuizzes: 0, totalAttempts: 0, avgScore: 0, uniqueUsersCount: 0 });
 
   readonly isGenerating = signal<boolean>(false);
   readonly isSingleGenerating = signal<boolean>(false);
   readonly generatedQuestion = signal<Question | null>(null);
+
+  // Markdown Import fields
+  mdText = `**1. ASP.NET Core qanday turdagi freymvork?**
+A) Faqat Windows uchun
+B) Cross-platform (Windows, Linux, macOS)
+C) Faqat mobil ilovalar uchun
+D) Faqat desktop ilovalar uchun
+**To'g'ri javob: B**`;
+  mdTitle = '';
+  mdCategory = 'dotnet';
+  mdDifficulty: Difficulty = 'O\'rta';
+  readonly isMdParsing = signal<boolean>(false);
+  readonly isMdImporting = signal<boolean>(false);
+  readonly parsedMdQuiz = signal<Quiz | null>(null);
 
   // Full AI Quiz Generator fields
   aiTopic = '';
@@ -576,6 +756,92 @@ export class AdminDashboardComponent implements OnInit {
     });
 
     this.apiService.getAdminStats().subscribe(s => this.stats.set(s));
+  }
+
+  onFileSelected(event: any): void {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        if (text) {
+          this.mdText = text;
+          if (!this.mdTitle) {
+            this.mdTitle = file.name.replace(/\.md$/, '').replace(/_/g, ' ');
+          }
+          this.previewMarkdown();
+        }
+      };
+      reader.readAsText(file);
+    }
+  }
+
+  getCategoryName(catId: string): string {
+    const cat = this.quizService.categories().find(c => c.id === catId);
+    return cat ? cat.name : catId;
+  }
+
+  previewMarkdown(): void {
+    if (!this.mdText.trim()) {
+      alert("Iltimos, Markdown matnini kiriting yoki .md fayl yuklang!");
+      return;
+    }
+
+    this.isMdParsing.set(true);
+    const catName = this.getCategoryName(this.mdCategory);
+
+    this.apiService.previewMarkdownQuiz({
+      markdownText: this.mdText,
+      title: this.mdTitle,
+      category: this.mdCategory,
+      categoryName: catName,
+      difficulty: this.mdDifficulty
+    }).subscribe({
+      next: (quiz) => {
+        this.isMdParsing.set(false);
+        this.parsedMdQuiz.set(quiz);
+      },
+      error: (err) => {
+        this.isMdParsing.set(false);
+        console.error(err);
+        alert("Markdown matnini parse qilishda xatolik. Formatni tekshiring.");
+      }
+    });
+  }
+
+  importMarkdownToDb(): void {
+    if (!this.mdText.trim()) {
+      alert("Iltimos, Markdown matnini kiriting!");
+      return;
+    }
+
+    this.isMdImporting.set(true);
+    const catName = this.getCategoryName(this.mdCategory);
+
+    this.apiService.importMarkdownQuiz({
+      markdownText: this.mdText,
+      title: this.mdTitle,
+      category: this.mdCategory,
+      categoryName: catName,
+      difficulty: this.mdDifficulty
+    }).subscribe({
+      next: (savedQuiz) => {
+        this.isMdImporting.set(false);
+        this.quizService.addCustomQuiz(savedQuiz);
+        alert(`" ${savedQuiz.title} " testi (${savedQuiz.questions.length} ta savol) ma'lumotlar bazasiga muvaffaqiyatli saqlandi!`);
+        this.parsedMdQuiz.set(null);
+        this.activeTab.set('attempts');
+      },
+      error: (err) => {
+        this.isMdImporting.set(false);
+        console.error(err);
+        alert("Markdown savollarini bazaga saqlashda xatolik yuz berdi.");
+      }
+    });
+  }
+
+  getLetter(idx: number): string {
+    return String.fromCharCode(65 + idx);
   }
 
   generateSingleQuestion(): void {

@@ -83,6 +83,14 @@ export class QuizApiService {
     return this.http.post<Question>(`${this.baseUrl}/admin/quizzes/${quizId}/questions`, question);
   }
 
+  previewMarkdownQuiz(req: { markdownText: string; title?: string; category?: string; categoryName?: string; difficulty?: string }): Observable<Quiz> {
+    return this.http.post<Quiz>(`${this.baseUrl}/admin/parse-markdown-preview`, req);
+  }
+
+  importMarkdownQuiz(req: { markdownText: string; title?: string; category?: string; categoryName?: string; difficulty?: string }): Observable<Quiz> {
+    return this.http.post<Quiz>(`${this.baseUrl}/admin/import-markdown`, req);
+  }
+
   getAdminStats(): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/admin/stats`).pipe(
       catchError(() => of({ totalQuizzes: 0, totalAttempts: 0, avgScore: 0, uniqueUsersCount: 0 }))
