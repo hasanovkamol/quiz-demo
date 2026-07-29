@@ -81,13 +81,13 @@ import { QuizCategory } from '../../models/quiz.model';
       <!-- Category Filter Pills -->
       <div class="flex items-center justify-between flex-wrap gap-4 mb-8 border-b border-slate-800/80 pb-4">
         <div class="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
-          @for (cat of categories; track cat.id) {
+          @for (cat of quizService.categories(); track cat.id) {
             <button 
               (click)="quizService.selectCategory(cat.id)"
               [class]="quizService.activeCategory() === cat.id ? 
                 'px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 border border-indigo-500 shadow-md shadow-indigo-600/30 transition' : 
                 'px-4 py-2 rounded-xl text-xs font-medium text-slate-400 bg-slate-900/80 border border-slate-800 hover:text-white hover:bg-slate-800 transition'">
-              {{ cat.label }}
+              {{ cat.name }}
             </button>
           }
         </div>
@@ -189,14 +189,6 @@ export class QuizListComponent {
   readonly Math = Math;
 
   readonly searchTerm = signal<string>('');
-
-  readonly categories: { id: QuizCategory | 'all'; label: string }[] = [
-    { id: 'all', label: 'Barchasi' },
-    { id: 'angular', label: 'Angular Framework' },
-    { id: 'dotnet', label: 'C# & .NET Core' },
-    { id: 'webdev', label: 'Web Infrastructure' },
-    { id: 'custom', label: 'Maxsus Testlar' }
-  ];
 
   readonly searchedQuizzes = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();

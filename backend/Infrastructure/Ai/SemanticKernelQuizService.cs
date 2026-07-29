@@ -212,6 +212,133 @@ JSON Formati:
         return quiz;
     }
 
+    public async Task<Question> GenerateSingleQuestionAsync(AiSingleQuestionRequest request)
+    {
+        var apiKey = request.ApiKey ?? configuration["Gemini:ApiKey"] ?? configuration["OpenAI:ApiKey"];
+        var prompt = $@"
+Siz Senior Staff Software Architect va Dunyo miqyosidagi Texnik Ekspertsiz. 
+Sizning vazifangiz: ""{request.Topic}"" mavzusida professional va chuqur bilimni sinovchi AYNAN 1 TA SAVOLDAN IBORAT TEST SAVOLI VA UNING JAVOBLARINI YARATISH.
+
+QOIDALAR VA SIFAT TALABLARI:
+1. SAVOL SHUNCAKI NAZARIY EMAS, BALKI REAL MUAMMOLAR, SCENARIYLAR VA KOD TAHLILIGA (codeSnippet) ASOSLANGAN BO'LSIN.
+2. Variantlar (options): 4 ta variant berilsin. Ularning 3 tasi mantiqan ishontirarli (lekin xato), 1 tasi mutloq to'g'ri bo'lsin. Variantlar bir-birini takrorlamasin.
+3. To'g'ri javob uchun nima uchun aynan shu javob to'g'riligi haqida batafsil izoh (explanation) berilsin.
+4. Til: O'zbek tili (IT terminlari va kod elementlari inglizcha saqlansin).
+5. Qiyinchilik darajasi: {request.Difficulty.ToUpper()}
+6. Natijani FAQAT VA FAQAT yaroqli JSON formatida qaytaring. Markdown teglar (```json) yozmang!
+
+JSON Formati:
+{{
+  ""text"": ""Aniq va professional savol matni"",
+  ""codeSnippet"": ""Real va to'g'ri yozilgan kod parchasi yoki null"",
+  ""options"": [
+    ""Variant A (Plauzibil xato)"",
+    ""Variant B (To'g'ri javob)"",
+    ""Variant C (Plauzibil xato)"",
+    ""Variant D (Plauzibil xato)""
+  ],
+  ""correctIndex"": 1,
+  ""explanation"": ""To'g'ri javob nega to'g'ri ekanligi haqida batafsil izoh.""
+}}
+";
+
+        string rawResponseJson = "";
+
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            try
+            {
+                rawResponseJson = await CallGeminiRestApiAsync(apiKey, prompt);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Direct Gemini REST API call failed for single question, trying Semantic Kernel");
+            }
+
+            if (string.IsNullOrWhiteSpace(rawResponseJson))
+            {
+                try
+                {
+                    var builder = Kernel.CreateBuilder();
+                    builder.AddGoogleAIGeminiChatCompletion(
+                        modelId: "gemini-1.5-flash",
+                        apiKey: apiKey
+                    );
+                    var kernel = builder.Build();
+                    var result = await kernel.InvokePromptAsync(prompt);
+                    rawResponseJson = result.ToString();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Semantic Kernel invocation failed for single question");
+                }
+            }
+        }
+
+        rawResponseJson = CleanJsonString(rawResponseJson);
+
+        AiGeneratedQuestion? aiQ = null;
+        if (!string.IsNullOrWhiteSpace(rawResponseJson))
+        {
+            try
+            {
+                aiQ = JsonSerializer.Deserialize<AiGeneratedQuestion>(rawResponseJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to parse single AI question JSON, generating fallback");
+            }
+        }
+
+        if (aiQ == null || string.IsNullOrWhiteSpace(aiQ.Text) || aiQ.Options == null || aiQ.Options.Count < 2)
+        {
+            aiQ = new AiGeneratedQuestion
+            {
+                Text = $"{request.Topic}: Ushbu texnologiyadan foydalanishda best practice (eng yaxshi amaliyot) tamoyili qaysi?",
+                CodeSnippet = $"// Example code snippet for {request.Topic}\npublic void Process() {{\n    // Optimized implementation\n}}",
+                Options = new List<string>
+                {
+                    $"{request.Topic} da resurslardan samarali foydalanish va asinxronizmdan to'g'ri foydalanish",
+                    "Barcha amallarni sinxron ravishda va bir oqimda bajarish",
+                    "Xatoliklarni ushlamasdan e'tiborsiz qoldirish",
+                    "Cheksiz sikllardan foydalanish"
+                },
+                CorrectIndex = 0,
+                Explanation = $"{request.Topic} bo'yicha to'g'ri va optimallashtirilgan yondashuv asinxronlik va toza kod tamoyillariga rioya qilishdir."
+            };
+        }
+
+        var questionId = Guid.NewGuid();
+        var options = new List<QuestionOption>();
+
+        for (int i = 0; i < aiQ.Options.Count; i++)
+        {
+            options.Add(new QuestionOption
+            {
+                Id = Guid.NewGuid(),
+                QuestionId = questionId,
+                Text = aiQ.Options[i]
+            });
+        }
+
+        var correctOptId = (aiQ.CorrectIndex >= 0 && aiQ.CorrectIndex < options.Count)
+            ? options[aiQ.CorrectIndex].Id.ToString()
+            : options.FirstOrDefault()?.Id.ToString() ?? Guid.NewGuid().ToString();
+
+        return new Question
+        {
+            Id = questionId,
+            Text = aiQ.Text,
+            CodeSnippet = aiQ.CodeSnippet,
+            CorrectOptionId = correctOptId,
+            Explanation = aiQ.Explanation,
+            Options = options
+        };
+    }
+
     private static async Task<string> CallGeminiRestApiAsync(string apiKey, string prompt)
     {
         var models = new[] { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro" };

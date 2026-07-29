@@ -6,4 +6,5 @@ namespace QuizApi.Core.Application.Interfaces;
 public interface ISemanticKernelQuizService
 {
     Task<Quiz> GenerateQuizAsync(AiQuizGenerationRequest request);
+    Task<Question> GenerateSingleQuestionAsync(AiSingleQuestionRequest request);
 }

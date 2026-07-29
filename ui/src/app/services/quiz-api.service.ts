@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of } from 'rxjs';
-import { Quiz, QuizAttempt } from '../models/quiz.model';
+import { Quiz, QuizAttempt, CategoryItem, AiSingleQuestionRequest, Question } from '../models/quiz.model';
 import { AppConfigService } from './app-config.service';
 
 @Injectable({
@@ -63,6 +63,24 @@ export class QuizApiService {
     apiKey?: string;
   }): Observable<Quiz> {
     return this.http.post<Quiz>(`${this.baseUrl}/admin/generate-ai-quiz`, req);
+  }
+
+  generateAiQuestion(req: AiSingleQuestionRequest): Observable<Question> {
+    return this.http.post<Question>(`${this.baseUrl}/admin/generate-ai-question`, req);
+  }
+
+  getCategories(): Observable<CategoryItem[]> {
+    return this.http.get<CategoryItem[]>(`${this.baseUrl}/admin/categories`).pipe(
+      catchError(() => of([]))
+    );
+  }
+
+  createCategory(category: CategoryItem): Observable<CategoryItem> {
+    return this.http.post<CategoryItem>(`${this.baseUrl}/admin/categories`, category);
+  }
+
+  addQuestionToQuiz(quizId: string, question: Question): Observable<Question> {
+    return this.http.post<Question>(`${this.baseUrl}/admin/quizzes/${quizId}/questions`, question);
   }
 
   getAdminStats(): Observable<any> {

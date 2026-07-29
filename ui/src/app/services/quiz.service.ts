@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Quiz, QuizCategory, QuizResult, UserAnswer, QuizAttempt } from '../models/quiz.model';
+import { Quiz, QuizCategory, QuizResult, UserAnswer, QuizAttempt, CategoryItem, Question } from '../models/quiz.model';
 import { SAMPLE_QUIZZES } from '../data/sample-quizzes';
 import { QuizApiService } from './quiz-api.service';
 import { TelegramWebAppService } from './telegram-webapp.service';
@@ -8,6 +8,14 @@ import confetti from 'canvas-confetti';
 const LOCAL_STORAGE_CUSTOM_QUIZZES_KEY = 'quizmaster_custom_quizzes';
 const LOCAL_STORAGE_HISTORY_KEY = 'quizmaster_quiz_history';
 const LOCAL_STORAGE_USER_NAME_KEY = 'quizmaster_user_name';
+
+const DEFAULT_CATEGORIES: CategoryItem[] = [
+  { id: 'all', name: 'Barchasi' },
+  { id: 'angular', name: 'Angular Framework', iconName: 'code-2', description: 'Angular 18+, Signals va RxJS' },
+  { id: 'dotnet', name: 'C# & .NET Core', iconName: 'terminal', description: 'C# 13, EF Core 9 va Minimal APIs' },
+  { id: 'webdev', name: 'Web Infrastructure', iconName: 'globe', description: 'Web Security, Architecture & Docker' },
+  { id: 'custom', name: 'Maxsus Testlar', iconName: 'sparkles', description: 'Foydalanuvchilar tomonidan yaratilgan testlar' }
+];
 
 @Injectable({
   providedIn: 'root'
@@ -23,6 +31,7 @@ export class QuizService {
 
   // Primary Signals
   readonly quizzes = signal<Quiz[]>([]);
+  readonly categories = signal<CategoryItem[]>(DEFAULT_CATEGORIES);
   readonly activeCategory = signal<QuizCategory | 'all'>('all');
   readonly quizHistory = signal<QuizResult[]>([]);
 
@@ -95,6 +104,15 @@ export class QuizService {
         this.currentUserName.set(savedName);
       }
     }
+
+    this.apiService.getCategories().subscribe(apiCats => {
+      if (apiCats && apiCats.length > 0) {
+        const catMap = new Map<string, CategoryItem>();
+        catMap.set('all', { id: 'all', name: 'Barchasi' });
+        apiCats.forEach(c => catMap.set(c.id, c));
+        this.categories.set(Array.from(catMap.values()));
+      }
+    });
 
     this.apiService.getQuizzes().subscribe(apiQuizzes => {
       if (apiQuizzes && apiQuizzes.length > 0) {
@@ -308,6 +326,40 @@ export class QuizService {
     this.isQuizActive.set(false);
     this.isQuizCompleted.set(false);
     this.latestResult.set(null);
+  }
+
+  addCategory(newCat: CategoryItem): void {
+    this.apiService.createCategory(newCat).subscribe({
+      next: (saved) => {
+        const updated = [...this.categories().filter(c => c.id !== saved.id), saved];
+        this.categories.set(updated);
+      },
+      error: () => {
+        const updated = [...this.categories().filter(c => c.id !== newCat.id), newCat];
+        this.categories.set(updated);
+      }
+    });
+  }
+
+  addQuestionToQuiz(quizId: string, question: Question): void {
+    this.apiService.addQuestionToQuiz(quizId, question).subscribe({
+      next: (savedQ) => {
+        this.quizzes.update(list => list.map(q => {
+          if (q.id === quizId) {
+            return { ...q, questions: [...q.questions, savedQ] };
+          }
+          return q;
+        }));
+      },
+      error: () => {
+        this.quizzes.update(list => list.map(q => {
+          if (q.id === quizId) {
+            return { ...q, questions: [...q.questions, question] };
+          }
+          return q;
+        }));
+      }
+    });
   }
 
   addCustomQuiz(newQuiz: Quiz): void {

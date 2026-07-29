@@ -20,6 +20,8 @@ QuizMaster PRO is an enterprise-grade, microservice-ready Full-Stack assessment 
 9. **EF Core Model Relationships & Migration**: Resolved `FK_QuestionOptions_Questions_QuestionId1` shadow property bug via explicit `.WithOne(o => o.Question)` and `.WithOne(u => u.Attempt)` EF Core mappings and migration `FixShadowPropertiesFK`.
 10. **Single Root Command Test Execution**: `npm run test` automatically executes both Angular UI tests (31/31 passed) and Backend Integration tests (7/7 passed).
 11. **Senior ASP.NET Core 100 ABCD Quiz Seeder**: [`Seeder_SeniorAspNetCore.cs`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Infrastructure/Persistence/Seeding/Seeder_SeniorAspNetCore.cs) — 100 ta senior darajadagi ABCD test savoli 8 ta bo'limga bo'lingan (C# Asoslari, ASP.NET Core, Web API, EF Core, Logging, Xavfsizlik, Arxitektura, Testing/DevOps).
+12. **Admin Category Creation & Management**: Dynamic category registration (`POST /api/admin/categories`, `GET /api/admin/categories`). Yaratilgan yangi kategoriyalar darhol Quiz List filter pills, Quiz Creator dropdown va AI Generator dropdownlarida aks etadi.
+13. **1-Click AI Single Question Generator & Direct Insert**: [`AdminDashboardComponent`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/admin/admin-dashboard.component.ts) va [`QuizCreatorComponent`](file:///home/user02/Projects/AI%20Projects/Qiuz/ui/src/app/components/quiz-creator/quiz-creator.component.ts) platformasida AI yordamida savollarni bitta-bitta shakllantirish, savol/javoblarni ko'rib chiqish va 1-click bilan muayyan testga insert qilib saqlash imkoniyati.
 
 ---
 

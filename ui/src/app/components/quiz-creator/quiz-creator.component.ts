@@ -2,6 +2,7 @@ import { Component, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QuizService } from '../../services/quiz.service';
+import { QuizApiService } from '../../services/quiz-api.service';
 import { Quiz, Question, QuestionOption, QuizCategory, Difficulty } from '../../models/quiz.model';
 
 @Component({
@@ -54,10 +55,11 @@ import { Quiz, Question, QuestionOption, QuizCategory, Difficulty } from '../../
               <select 
                 [(ngModel)]="category" 
                 class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500">
-                <option value="angular">Angular Framework</option>
-                <option value="dotnet">C# & .NET Core</option>
-                <option value="webdev">Web Infrastructure</option>
-                <option value="custom">Maxsus Test</option>
+                @for (c of quizService.categories(); track c.id) {
+                  @if (c.id !== 'all') {
+                    <option [value]="c.id">{{ c.name }}</option>
+                  }
+                }
               </select>
             </div>
 
@@ -109,15 +111,27 @@ import { Quiz, Question, QuestionOption, QuizCategory, Difficulty } from '../../
               @for (q of questions(); track q.id; let qIdx = $index) {
                 <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 relative">
                   
-                  <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                     <span class="text-xs font-bold text-indigo-400">Savol #{{ qIdx + 1 }}</span>
-                    @if (questions().length > 1) {
+                    <div class="flex items-center gap-2">
                       <button 
-                        (click)="removeQuestion(qIdx)" 
-                        class="text-slate-500 hover:text-rose-400 text-xs font-semibold transition">
-                        O'chirish
+                        (click)="suggestQuestionWithAi(qIdx)" 
+                        [disabled]="loadingAiIndex() === qIdx"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition flex items-center gap-1">
+                        @if (loadingAiIndex() === qIdx) {
+                          <span>AI izlamoqda...</span>
+                        } @else {
+                          <span>⚡ AI Taklifi Bilan To'ldirish</span>
+                        }
                       </button>
-                    }
+                      @if (questions().length > 1) {
+                        <button 
+                          (click)="removeQuestion(qIdx)" 
+                          class="text-slate-500 hover:text-rose-400 text-xs font-semibold transition">
+                          O'chirish
+                        </button>
+                      }
+                    </div>
                   </div>
 
                   <!-- Question Text -->
@@ -189,7 +203,10 @@ import { Quiz, Question, QuestionOption, QuizCategory, Difficulty } from '../../
 })
 export class QuizCreatorComponent {
   readonly quizService = inject(QuizService);
+  private readonly apiService = inject(QuizApiService);
   readonly closeModal = output<void>();
+
+  readonly loadingAiIndex = signal<number | null>(null);
 
   quizTitle = '';
   category: QuizCategory = 'custom';
@@ -200,6 +217,38 @@ export class QuizCreatorComponent {
   readonly questions = signal<Question[]>([
     this.createEmptyQuestion('1')
   ]);
+
+  suggestQuestionWithAi(qIdx: number): void {
+    const topicPrompt = this.quizTitle.trim() ? `${this.quizTitle} (${this.category})` : 'Software Engineering';
+    this.loadingAiIndex.set(qIdx);
+
+    this.apiService.generateAiQuestion({
+      topic: topicPrompt,
+      category: this.category,
+      difficulty: this.difficulty
+    }).subscribe({
+      next: (aiQ) => {
+        this.loadingAiIndex.set(null);
+        const list = [...this.questions()];
+        if (list[qIdx]) {
+          list[qIdx] = {
+            ...list[qIdx],
+            text: aiQ.text,
+            codeSnippet: aiQ.codeSnippet || '',
+            options: aiQ.options,
+            correctOptionId: aiQ.correctOptionId,
+            explanation: aiQ.explanation
+          };
+          this.questions.set(list);
+        }
+      },
+      error: (err) => {
+        this.loadingAiIndex.set(null);
+        console.error(err);
+        alert("AI savol taklif qilishda xatolik yuz berdi.");
+      }
+    });
+  }
 
   private createEmptyQuestion(idSuffix: string): Question {
     const qId = 'custom-q-' + idSuffix;

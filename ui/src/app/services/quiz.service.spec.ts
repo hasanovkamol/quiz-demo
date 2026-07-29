@@ -35,6 +35,10 @@ describe('QuizService Unit Tests', () => {
   beforeEach(() => {
     const mockApiService = {
       getQuizzes: () => of(mockQuizzes),
+      getCategories: () => of([]),
+      createCategory: (c: any) => of(c),
+      generateAiQuestion: () => of({}),
+      addQuestionToQuiz: () => of({}),
       submitAttempt: () => of({})
     };
 

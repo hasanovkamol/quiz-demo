@@ -31,3 +31,18 @@ public record AiQuizGenerationRequest(
     int TimeLimitMinutes,
     string? ApiKey
 );
+
+public record AiSingleQuestionRequest(
+    string Topic,
+    string? Category,
+    string Difficulty,
+    string? ApiKey
+);
+
+public record CategoryDto(
+    string Id,
+    string Name,
+    string IconName,
+    string Description
+);
+

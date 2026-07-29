@@ -1,5 +1,20 @@
-export type QuizCategory = 'all' | 'angular' | 'dotnet' | 'webdev' | 'custom';
+export type QuizCategory = string;
 export type Difficulty = 'Oson' | 'O\'rta' | 'Qiyin';
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  iconName?: string;
+  description?: string;
+}
+
+export interface AiSingleQuestionRequest {
+  topic: string;
+  category?: string;
+  difficulty: Difficulty;
+  apiKey?: string;
+}
+
 
 export interface QuestionOption {
   id: string;
