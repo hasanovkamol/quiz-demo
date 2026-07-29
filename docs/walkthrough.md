@@ -28,6 +28,13 @@ QuizMaster PRO is an enterprise-grade, microservice-ready Full-Stack assessment 
 17. **Telegram Bot Security & Performance Optimizations**: [`TelegramInitDataValidator.cs`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Infrastructure/Telegram/TelegramInitDataValidator.cs), [`TelegramEndpoints.cs`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Endpoints/TelegramEndpoints.cs) va [`TelegramBotService.cs`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Infrastructure/Telegram/TelegramBotService.cs) — Telegram Mini App HMAC SHA256 cryptographic initData authentication & real JWT generation, non-blocking webhook background task execution (instant 200 OK), `X-Telegram-Bot-Api-Secret-Token` validation, `[Index(nameof(TelegramUserId))]` database indexing, `IMemoryCache` user caching, and 400ms user click debouncing.
 18. **User Experience & Gamification Endpoints**: [`QuizEndpoints.cs`](file:///home/user02/Projects/AI%20Projects/Qiuz/backend/Endpoints/QuizEndpoints.cs) — Foydalanuvchilar uchun `/api/quizzes/user-analytics` (Analitika, Streaks, va Badges `🥇 C# Architect`, `🛡️ Honest Tester`, `🔥 Master Tester`), `/api/quizzes/mistakes` (Xatolar ustida ishlash testi), va `/api/quizzes/certificate/{attemptId}` (80%+ natija uchun raqamli sertifikat).
 
+19. **Category Completion Star Ratings (0-5 ⭐), Web UI Difficulty Grouping, Retake & White Theme Certificate Generation**:
+- **0-100% Star Rating Scale**: 81%-100% (5 ⭐⭐⭐⭐⭐), 61%-80% (4 ⭐⭐⭐⭐), 41%-60% (3 ⭐⭐⭐), 21%-40% (2 ⭐⭐), 1%-20% (1 ⭐), 0% (0 Stars).
+- **Telegram Bot & Web App Synchronization**: Telegram inline keyboard category buttons (`⚡ ASP.NET Core ⭐⭐⭐⭐⭐`), Telegram finish quiz results with star breakdown, `/stats`, `/results` and `GetDynamicCategoryKeyboardAsync(userId)`.
+- **Web UI Difficulty Grouping Filters**: Filter tabs (`🌐 Barchasi`, `🟢 Oson`, `🟡 O'rtacha`, `🔴 Qiyin`) on `QuizListComponent`.
+- **Re-taking Tests & Attempt Details**: `🔄 Qayta yechish` button on `QuizListComponent`, `QuizResultComponent`, `HistoryModalComponent`, and Telegram bot completion message.
+- **White Theme Professional Certificate Generation**: `CertificateModalComponent` with white background, ~14px clean legible typography (Inter/Roboto font), gold geometric borders, user name, score percentage, stars rating, certificate code, issue date, QR verification payload, print/PDF export, and shareable link copying for scores >= 70%.
+
 ---
 
 ## 🧪 Verification & Build Status
@@ -38,4 +45,5 @@ QuizMaster PRO is an enterprise-grade, microservice-ready Full-Stack assessment 
 - **Backend Integration & Unit Tests**: `npm run test:backend` -> **Passed! (9/9 Passed, 0 Failed)**.
 - **Backend Build**: `cd backend && dotnet build` -> **Build Succeeded (0 Errors, 0 Warnings)**.
 - **Frontend Build**: `cd ui && npx ng build` -> **Bundle generation complete (0 Errors)**.
+
 

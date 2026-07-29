@@ -94,3 +94,28 @@ export interface QuizResult {
   userAnswers: UserAnswer[];
   completedAt: string;
 }
+
+export interface CategoryProgress {
+  category: string;
+  categoryName: string;
+  totalQuestions: number;
+  bestScorePercentage: number;
+  starsCount: number;
+  isCompleted: boolean;
+  hasCertificate: boolean;
+  lastAttemptId?: string;
+}
+
+export interface CertificateData {
+  certificateId: string;
+  certificateCode: string;
+  userName: string;
+  quizTitle: string;
+  categoryName: string;
+  scorePercentage: number;
+  starsCount: number;
+  issuedAt: string;
+  certificateUrl: string;
+  issuer: string;
+  badgeTitle: string;
+}

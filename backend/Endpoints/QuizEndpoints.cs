@@ -171,27 +171,110 @@ public static class QuizEndpoints
                 return TypedResults.NotFound<object>(new { message = "Test natijasi topilmadi" });
             }
 
-            if (attempt.ScorePercentage < 80.0)
+            if (attempt.ScorePercentage < 70.0)
             {
-                return TypedResults.BadRequest<object>(new { message = "Sertifikat olish uchun kamida 80% natija kerak." });
+                return TypedResults.BadRequest<object>(new { message = "Sertifikat olish uchun kamida 70% natija kerak." });
             }
+
+            int stars = attempt.ScorePercentage switch
+            {
+                > 80 => 5,
+                > 60 => 4,
+                > 40 => 3,
+                > 20 => 2,
+                > 0 => 1,
+                _ => 0
+            };
 
             var certificate = new
             {
                 certificateId = $"CERT-{attempt.Id.ToString()[..8].ToUpper()}",
+                certificateCode = $"CERT-QM-{attempt.Id.ToString()[..8].ToUpper()}-2026",
                 userName = attempt.UserName,
                 quizTitle = attempt.QuizTitle,
                 categoryName = attempt.CategoryName,
                 scorePercentage = Math.Round(attempt.ScorePercentage, 1),
-                issuedAt = attempt.CompletedAt.ToString("dd-MM-yyyy"),
+                starsCount = stars,
+                issuedAt = attempt.CompletedAt.ToString("dd.MM.yyyy"),
                 certificateUrl = $"/api/quizzes/certificate/{attempt.Id}",
                 issuer = "QuizMaster PRO Certification Engine",
-                badgeTitle = "Senior Certified Professional"
+                badgeTitle = stars == 5 ? "Senior Certified Architect" : "Certified Professional"
             };
 
             return TypedResults.Ok<object>(certificate);
         })
         .WithSummary("Muvaffaqiyatli topshirilgan test uchun PDF/Raqamli Sertifikat ma'lumotini olish");
+
+        group.MapGet("/category-progress", async (string? userName, QuizDbContext dbContext) =>
+        {
+            var quizzes = await dbContext.Quizzes
+                .Include(q => q.Questions)
+                .ToListAsync();
+
+            var attempts = await dbContext.QuizAttempts
+                .Where(a => string.IsNullOrEmpty(userName) || a.UserName == userName)
+                .ToListAsync();
+
+            var categories = quizzes
+                .GroupBy(q => q.Category)
+                .Select(g =>
+                {
+                    var catName = g.First().CategoryName;
+                    var catQuizzes = g.ToList();
+                    int totalQuestions = catQuizzes.Sum(q => q.Questions.Count);
+
+                    var catAttempts = attempts
+                        .Where(a => string.Equals(a.CategoryName, g.Key, StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(a.CategoryName, catName, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    double bestScore = catAttempts.Any() ? catAttempts.Max(a => a.ScorePercentage) : 0;
+                    var lastAttempt = catAttempts.OrderByDescending(a => a.CompletedAt).FirstOrDefault();
+
+                    int stars = bestScore switch
+                    {
+                        > 80 => 5,
+                        > 60 => 4,
+                        > 40 => 3,
+                        > 20 => 2,
+                        > 0 => 1,
+                        _ => 0
+                    };
+
+                    return new
+                    {
+                        category = g.Key,
+                        categoryName = catName,
+                        totalQuestions,
+                        bestScorePercentage = Math.Round(bestScore, 1),
+                        starsCount = stars,
+                        isCompleted = bestScore >= 70.0,
+                        hasCertificate = bestScore >= 70.0,
+                        lastAttemptId = lastAttempt?.Id
+                    };
+                })
+                .ToList();
+
+            return TypedResults.Ok(categories);
+        })
+        .WithSummary("Kategoriyalar bo'yicha progress va yulduzchalar ko'rsatkichini olish");
+
+        group.MapGet("/by-category", async (string category, string? difficulty, QuizDbContext dbContext) =>
+        {
+            var query = dbContext.Quizzes
+                .Include(q => q.Questions)
+                    .ThenInclude(q => q.Options)
+                .Where(q => q.Category.ToLower() == category.ToLower());
+
+            if (!string.IsNullOrEmpty(difficulty) && !difficulty.Equals("All", StringComparison.OrdinalIgnoreCase) && !difficulty.Equals("Barchasi", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(q => q.Difficulty.ToLower() == difficulty.ToLower());
+            }
+
+            var quizzes = await query.ToListAsync();
+            return TypedResults.Ok(quizzes);
+        })
+        .WithSummary("Kategoriya va qiyinchilik darajasi bo'yicha testlarni olish");
 
         return group;
     }

@@ -100,4 +100,21 @@ export class QuizApiService {
       catchError(() => of({ totalQuizzes: 0, totalAttempts: 0, avgScore: 0, uniqueUsersCount: 0 }))
     );
   }
+
+  getCategoryProgress(userName?: string): Observable<any[]> {
+    const params: any = {};
+    if (userName) params.userName = userName;
+    return this.http.get<any[]>(`${this.baseUrl}/quizzes/category-progress`, { params }).pipe(
+      catchError(() => of([]))
+    );
+  }
+
+  getCertificate(attemptId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/quizzes/certificate/${attemptId}`).pipe(
+      catchError(err => {
+        console.warn('Certificate fetch error', err);
+        return of(null);
+      })
+    );
+  }
 }

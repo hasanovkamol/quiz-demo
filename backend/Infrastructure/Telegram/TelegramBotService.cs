@@ -87,11 +87,11 @@ public class TelegramBotService
 
         if (text.StartsWith("/start"))
         {
-            await SendWelcomeMessageAsync(chatId, message.From?.FirstName ?? "Dasturchi");
+            await SendWelcomeMessageAsync(chatId, userId, message.From?.FirstName ?? "Dasturchi");
         }
         else if (text.StartsWith("/quiz"))
         {
-            await SendCategorySelectionAsync(chatId);
+            await SendCategorySelectionAsync(chatId, userId);
         }
         else if (text.StartsWith("/results"))
         {
@@ -115,7 +115,7 @@ public class TelegramBotService
         }
     }
 
-    private async Task SendWelcomeMessageAsync(long chatId, string name)
+    private async Task SendWelcomeMessageAsync(long chatId, long userId, string name)
     {
         var webAppUrl = Environment.GetEnvironmentVariable("TELEGRAM_WEBAPP_URL") ?? "";
 
@@ -129,7 +129,7 @@ public class TelegramBotService
             });
         }
 
-        var dynamicKeyboard = await GetDynamicCategoryKeyboardAsync();
+        var dynamicKeyboard = await GetDynamicCategoryKeyboardAsync(userId);
         buttons.AddRange(dynamicKeyboard.InlineKeyboard.Select(r => r.ToList()));
 
         buttons.Add(new List<InlineKeyboardButton>
@@ -153,9 +153,9 @@ public class TelegramBotService
         );
     }
 
-    private async Task SendCategorySelectionAsync(long chatId)
+    private async Task SendCategorySelectionAsync(long chatId, long userId)
     {
-        var inlineKeyboard = await GetDynamicCategoryKeyboardAsync();
+        var inlineKeyboard = await GetDynamicCategoryKeyboardAsync(userId);
 
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
@@ -165,7 +165,7 @@ public class TelegramBotService
         );
     }
 
-    private async Task<InlineKeyboardMarkup> GetDynamicCategoryKeyboardAsync()
+    private async Task<InlineKeyboardMarkup> GetDynamicCategoryKeyboardAsync(long? userId = null)
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
@@ -174,6 +174,18 @@ public class TelegramBotService
             .Select(q => new { q.Category, q.CategoryName })
             .Distinct()
             .ToListAsync();
+
+        List<QuizAttempt> userAttempts = new();
+        if (userId.HasValue)
+        {
+            var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == userId.Value);
+            if (dbUser != null)
+            {
+                userAttempts = await dbContext.QuizAttempts
+                    .Where(a => a.UserName == dbUser.Name)
+                    .ToListAsync();
+            }
+        }
 
         var buttons = new List<List<InlineKeyboardButton>>();
         var row = new List<InlineKeyboardButton>();
@@ -194,7 +206,27 @@ public class TelegramBotService
                 _ => "🔥"
             };
 
-            row.Add(InlineKeyboardButton.WithCallbackData($"{icon} {cat.CategoryName}", $"cat:{cat.Category}"));
+            string starsSuffix = "";
+            var catAttempts = userAttempts.Where(a => string.Equals(a.CategoryName, cat.Category, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (catAttempts.Any())
+            {
+                double maxScore = catAttempts.Max(a => a.ScorePercentage);
+                int stars = maxScore switch
+                {
+                    > 80 => 5,
+                    > 60 => 4,
+                    > 40 => 3,
+                    > 20 => 2,
+                    > 0 => 1,
+                    _ => 0
+                };
+                if (stars > 0)
+                {
+                    starsSuffix = $" {new string('⭐', stars)}";
+                }
+            }
+
+            row.Add(InlineKeyboardButton.WithCallbackData($"{icon} {cat.CategoryName}{starsSuffix}", $"cat:{cat.Category}"));
             if (row.Count == 2)
             {
                 buttons.Add(row);
@@ -502,6 +534,7 @@ public class TelegramBotService
 
         string userName = "Telegram Dasturchi";
 
+        Guid? savedAttemptId = null;
         try
         {
             using var scope = _serviceProvider.CreateScope();
@@ -513,40 +546,77 @@ public class TelegramBotService
                 userName = dbUser.Name;
             }
 
-            var quiz = await dbContext.Quizzes.FirstOrDefaultAsync(q => q.Category == session.Category && q.Difficulty == session.Difficulty);
-            if (quiz != null)
+            var quiz = await dbContext.Quizzes.FirstOrDefaultAsync(q => q.Category == session.Category && q.Difficulty == session.Difficulty)
+                       ?? await dbContext.Quizzes.FirstOrDefaultAsync(q => q.Category == session.Category);
+
+            var attempt = new QuizAttempt
             {
-                var attempt = new QuizAttempt
-                {
-                    QuizId = quiz.Id,
-                    QuizTitle = quiz.Title,
-                    CategoryName = quiz.Category,
-                    UserName = userName,
-                    TotalQuestions = total,
-                    CorrectAnswersCount = correct,
-                    ScorePercentage = percentage,
-                    CompletedAt = DateTime.UtcNow
-                };
-                dbContext.QuizAttempts.Add(attempt);
-                await dbContext.SaveChangesAsync();
-            }
+                QuizId = quiz?.Id ?? Guid.NewGuid(),
+                QuizTitle = quiz?.Title ?? session.Category,
+                CategoryName = session.Category,
+                UserName = userName,
+                TotalQuestions = total,
+                CorrectAnswersCount = correct,
+                ScorePercentage = percentage,
+                CompletedAt = DateTime.UtcNow
+            };
+            dbContext.QuizAttempts.Add(attempt);
+            await dbContext.SaveChangesAsync();
+            savedAttemptId = attempt.Id;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error saving quiz attempt to database during quiz completion");
         }
 
+        int stars = percentage switch
+        {
+            > 80 => 5,
+            > 60 => 4,
+            > 40 => 3,
+            > 20 => 2,
+            > 0 => 1,
+            _ => 0
+        };
+
+        string starsStr = stars > 0 ? new string('⭐', stars) : "⚪ 0 Yulduz";
+
         string resultMsg = $"🎉 <b>TEST YAKUNLANDI!</b>\n\n" +
-                           $"👤 <b>Dasturchi:</b> {userName}\n" +
-                           $"📚 <b>Bo'lim:</b> {session.Category.ToUpper()} ({session.Difficulty})\n" +
-                           $"🎯 <b>Natija:</b> {correct} / {total} ball ({Math.Round(percentage, 1)}%)\n\n" +
-                           $"🏆 <i>Natijangiz saqlandi!</i>\n\n" +
-                           $"Natijalar tarixini ko'rish uchun /results buyrug'ini bosing.";
+                           $"👤 <b>Dasturchi:</b> {HtmlEncode(userName)}\n" +
+                           $"📚 <b>Bo'lim:</b> {HtmlEncode(session.Category.ToUpper())} ({HtmlEncode(session.Difficulty)})\n" +
+                           $"🎯 <b>Natija:</b> {correct} / {total} ball ({Math.Round(percentage, 1)}%)\n" +
+                           $"⭐ <b>Baho:</b> {starsStr}\n\n";
+
+        if (percentage >= 70.0)
+        {
+            resultMsg += $"🎓 <b>Tabriklaymiz! Siz Sertifikat oldingiz!</b>\n\n";
+        }
+
+        resultMsg += $"Natijalar tarixini ko'rish uchun /results buyrug'ini bosing.";
+
+        var buttons = new List<List<InlineKeyboardButton>>();
+
+        var webAppUrl = Environment.GetEnvironmentVariable("TELEGRAM_WEBAPP_URL") ?? "";
+        if (percentage >= 70.0 && savedAttemptId.HasValue && !string.IsNullOrWhiteSpace(webAppUrl) && webAppUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            string certUrl = $"{webAppUrl.TrimEnd('/')}/?certId={savedAttemptId}";
+            buttons.Add(new List<InlineKeyboardButton>
+            {
+                InlineKeyboardButton.WithWebApp("🎓 Sertifikatni ko'rish / yuklab olish", new WebAppInfo { Url = certUrl })
+            });
+        }
+
+        buttons.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("🔄 Qayta yechish", $"startquiz:{session.Category}:{session.Difficulty}"),
+            InlineKeyboardButton.WithCallbackData("📋 Natijalar Tarixi", "respage:1:all")
+        });
 
         await _botClient.SendTextMessageAsync(
             chatId: session.ChatId,
             text: resultMsg,
-            parseMode: ParseMode.Html
+            parseMode: ParseMode.Html,
+            replyMarkup: new InlineKeyboardMarkup(buttons)
         );
     }
 

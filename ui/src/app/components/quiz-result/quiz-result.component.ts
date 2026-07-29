@@ -1,17 +1,20 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QuizService } from '../../services/quiz.service';
+import { QuizApiService } from '../../services/quiz-api.service';
+import { CertificateModalComponent } from '../certificate-modal/certificate-modal.component';
+import { CertificateData } from '../../models/quiz.model';
 
 @Component({
   selector: 'app-quiz-result',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CertificateModalComponent],
   template: `
     @if (quizService.latestResult(); as result) {
       <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         
         <!-- Score Summary Header Card -->
-        <div class="glass-card rounded-3xl p-8 sm:p-10 mb-8 border border-slate-800 text-center relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950">
+        <div class="glass-card rounded-3xl p-8 sm:p-10 mb-8 border border-slate-800 text-center relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 shadow-2xl">
           
           <!-- Background Glow -->
           <div [class]="result.scorePercentage >= 70 ? 
@@ -20,10 +23,15 @@ import { QuizService } from '../../services/quiz.service';
           </div>
 
           <div class="relative z-10 max-w-xl mx-auto">
-            <!-- Badge -->
-            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 mb-6">
-              <span class="w-2 h-2 rounded-full" [class.bg-emerald-400]="result.scorePercentage >= 70" [class.bg-rose-400]="result.scorePercentage < 70"></span>
-              {{ result.categoryName }} • {{ result.quizTitle }}
+            <!-- Category & Stars Badge -->
+            <div class="flex items-center justify-center gap-2 mb-6">
+              <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300">
+                <span class="w-2 h-2 rounded-full" [class.bg-emerald-400]="result.scorePercentage >= 70" [class.bg-rose-400]="result.scorePercentage < 70"></span>
+                {{ result.categoryName }} • {{ result.quizTitle }}
+              </div>
+              <div class="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-bold text-amber-400">
+                {{ getStarsStr(result.scorePercentage) }}
+              </div>
             </div>
 
             <!-- Circular / Large Score Display -->
@@ -51,9 +59,24 @@ import { QuizService } from '../../services/quiz.service';
             <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">
               {{ getGradeTitle(result.scorePercentage) }}
             </h2>
-            <p class="text-xs sm:text-sm text-slate-400 mb-8">
+            <p class="text-xs sm:text-sm text-slate-400 mb-6">
               {{ getGradeSubtitle(result.scorePercentage) }}
             </p>
+
+            <!-- Certificate Button Banner if score >= 70% -->
+            @if (result.scorePercentage >= 70) {
+              <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 mb-6 flex items-center justify-between gap-4">
+                <div class="text-left">
+                  <h4 class="text-xs font-bold text-amber-300">🎓 Tabriklaymiz! Siz Sertifikat oldingiz!</h4>
+                  <p class="text-[11px] text-amber-200/70">Ushbu bo'lim bo'yicha rasmiy sertifikatingizni yuklab oling.</p>
+                </div>
+                <button 
+                  (click)="openCertificate(result)"
+                  class="px-4 py-2 rounded-xl text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 transition shadow-md shrink-0">
+                  Sertifikatni olish
+                </button>
+              </div>
+            }
 
             <!-- Quick Metrics Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/80 rounded-2xl p-4 border border-slate-800">
@@ -87,7 +110,7 @@ import { QuizService } from '../../services/quiz.service';
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Qayta topshirish
+            🔄 Qayta yechish
           </button>
 
           <button 
@@ -176,10 +199,21 @@ import { QuizService } from '../../services/quiz.service';
 
       </div>
     }
+
+    <!-- Certificate Modal -->
+    @if (selectedCertificate()) {
+      <app-certificate-modal 
+        [certificate]="selectedCertificate()"
+        (closeModal)="selectedCertificate.set(null)">
+      </app-certificate-modal>
+    }
   `
 })
 export class QuizResultComponent {
   readonly quizService = inject(QuizService);
+  readonly apiService = inject(QuizApiService);
+
+  readonly selectedCertificate = signal<CertificateData | null>(null);
 
   getQuizQuestions() {
     const result = this.quizService.latestResult();
@@ -204,6 +238,15 @@ export class QuizResultComponent {
     return 'p-3 rounded-xl border border-slate-800 bg-slate-900/40 text-slate-400';
   }
 
+  getStarsStr(score: number): string {
+    if (score > 80) return '⭐⭐⭐⭐⭐';
+    if (score > 60) return '⭐⭐⭐⭐';
+    if (score > 40) return '⭐⭐⭐';
+    if (score > 20) return '⭐⭐';
+    if (score > 0) return '⭐';
+    return '⚪';
+  }
+
   getGradeTitle(percentage: number): string {
     if (percentage >= 90) return "A'lo! Mukammal Natija! 🌟";
     if (percentage >= 70) return "Barakalla! Yaxshi Natija! 👍";
@@ -222,5 +265,36 @@ export class QuizResultComponent {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m} daq ${s} son`;
+  }
+
+  openCertificate(result: any): void {
+    if (result.id) {
+      this.apiService.getCertificate(result.id).subscribe(cert => {
+        if (cert) {
+          this.selectedCertificate.set(cert);
+        } else {
+          this.setFallbackCertificate(result);
+        }
+      });
+    } else {
+      this.setFallbackCertificate(result);
+    }
+  }
+
+  private setFallbackCertificate(result: any): void {
+    const stars = result.scorePercentage > 80 ? 5 : result.scorePercentage > 60 ? 4 : 3;
+    this.selectedCertificate.set({
+      certificateId: `CERT-${(result.id || 'DEMO').substring(0, 8).toUpperCase()}`,
+      certificateCode: `CERT-QM-${(result.id || 'DEMO').substring(0, 8).toUpperCase()}-2026`,
+      userName: this.quizService.currentUserName() || 'Dasturchi',
+      quizTitle: result.quizTitle,
+      categoryName: result.categoryName,
+      scorePercentage: result.scorePercentage,
+      starsCount: stars,
+      issuedAt: result.completedAt,
+      certificateUrl: '',
+      issuer: 'QuizMaster PRO Certification Board',
+      badgeTitle: stars === 5 ? 'Senior Certified Architect' : 'Certified Professional'
+    });
   }
 }

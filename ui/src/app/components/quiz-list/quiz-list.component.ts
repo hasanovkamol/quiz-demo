@@ -1,13 +1,15 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QuizService } from '../../services/quiz.service';
-import { QuizCategory } from '../../models/quiz.model';
+import { QuizApiService } from '../../services/quiz-api.service';
+import { CertificateModalComponent } from '../certificate-modal/certificate-modal.component';
+import { CertificateData, CategoryProgress } from '../../models/quiz.model';
 
 @Component({
   selector: 'app-quiz-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CertificateModalComponent],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
@@ -25,7 +27,7 @@ import { QuizCategory } from '../../models/quiz.model';
             Dasturlash bo'yicha <span class="gradient-text">Bilimingizni Sinang</span>
           </h1>
           <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-            Angular, C# .NET Core, Web Security va zamonaviy web infratuzilmasi bo'yicha tayyorlangan interaktiv va taymerli testlarni topshiring.
+            Angular, C# .NET Core, Web Security va infratuzilma bo'yicha tayyorlangan interaktiv testlar, yulduzchalar (⭐) bilan baholash va kasbiy Sertifikatlar.
           </p>
 
           <!-- Search Bar -->
@@ -52,48 +54,96 @@ import { QuizCategory } from '../../models/quiz.model';
             1
           </div>
           <div>
-            <h4 class="text-xs font-bold text-white">Testni Tanlang</h4>
-            <p class="text-[11px] text-slate-400">Kerakli kategoriya va darajadagi testni tanlang</p>
+            <h4 class="text-xs font-bold text-white">Test & Qiyinchilik</h4>
+            <p class="text-[11px] text-slate-400">Oson, O'rtacha, Qiyin yoki Barcha savollarni tanlang</p>
           </div>
         </div>
 
         <div class="p-4 rounded-2xl glass-card border border-slate-800 flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm shrink-0">
-            2
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm shrink-0">
+            ⭐ 5
           </div>
           <div>
-            <h4 class="text-xs font-bold text-white">Javob Bering (Taymer)</h4>
-            <p class="text-[11px] text-slate-400">Belgilangan vaqt ichida savollarga javob belgilang</p>
+            <h4 class="text-xs font-bold text-white">Yulduzchalar (0-5 ⭐)</h4>
+            <p class="text-[11px] text-slate-400">0%-100% natijangizga proportional yulduzlar oling</p>
           </div>
         </div>
 
         <div class="p-4 rounded-2xl glass-card border border-slate-800 flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">
-            3
+            📜
           </div>
           <div>
-            <h4 class="text-xs font-bold text-white">Natija va Izohlar</h4>
-            <p class="text-[11px] text-slate-400">Har bir savol bo'yicha batafsil tahlilni ko'ring</p>
+            <h4 class="text-xs font-bold text-white">Kasbiy Sertifikat</h4>
+            <p class="text-[11px] text-slate-400">70%+ natija ko'rsatib, rasmiy Sertifikatni yuklab oling</p>
           </div>
         </div>
       </div>
 
-      <!-- Category Filter Pills -->
-      <div class="flex items-center justify-between flex-wrap gap-4 mb-8 border-b border-slate-800/80 pb-4">
-        <div class="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
-          @for (cat of quizService.categories(); track cat.id) {
-            <button 
-              (click)="quizService.selectCategory(cat.id)"
-              [class]="quizService.activeCategory() === cat.id ? 
-                'px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 border border-indigo-500 shadow-md shadow-indigo-600/30 transition' : 
-                'px-4 py-2 rounded-xl text-xs font-medium text-slate-400 bg-slate-900/80 border border-slate-800 hover:text-white hover:bg-slate-800 transition'">
-              {{ cat.name }}
-            </button>
-          }
+      <!-- Filters & Difficulty Tabs -->
+      <div class="space-y-4 mb-8">
+        
+        <!-- Category Pills -->
+        <div class="flex items-center justify-between flex-wrap gap-4 border-b border-slate-800/80 pb-4">
+          <div class="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
+            @for (cat of quizService.categories(); track cat.id) {
+              <button 
+                (click)="quizService.selectCategory(cat.id)"
+                [class]="quizService.activeCategory() === cat.id ? 
+                  'px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 border border-indigo-500 shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5' : 
+                  'px-4 py-2 rounded-xl text-xs font-medium text-slate-400 bg-slate-900/80 border border-slate-800 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5'">
+                <span>{{ cat.name }}</span>
+                @if (getCategoryStars(cat.id); as stars) {
+                  @if (stars > 0) {
+                    <span class="text-amber-400 text-[11px]">⭐{{ stars }}</span>
+                  }
+                }
+              </button>
+            }
+          </div>
+
+          <div class="text-xs text-slate-400 font-semibold">
+            Mavjud testlar: <span class="text-indigo-400 font-bold">{{ searchedQuizzes().length }}</span> ta
+          </div>
         </div>
-        <div class="text-xs text-slate-400 font-semibold">
-          Mavjud testlar: <span class="text-indigo-400 font-bold">{{ searchedQuizzes().length }}</span> ta
+
+        <!-- Web UI Difficulty Filter Grouping (All, Oson, Medium/O'rtacha, Qiyin) -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+          <span class="text-xs text-slate-400 font-medium mr-2">Qiyinchilik darajasi:</span>
+          
+          <button 
+            (click)="setDifficulty('all')"
+            [class]="activeDifficulty() === 'all' ? 
+              'px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-slate-800 border border-slate-700' : 
+              'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-950 border border-slate-900'">
+            🌐 Barchasi (All)
+          </button>
+
+          <button 
+            (click)="setDifficulty('Oson')"
+            [class]="activeDifficulty() === 'Oson' ? 
+              'px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40' : 
+              'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-emerald-400 bg-slate-950 border border-slate-900'">
+            🟢 Oson (Easy)
+          </button>
+
+          <button 
+            (click)="setDifficulty('Medium')"
+            [class]="activeDifficulty() === 'Medium' ? 
+              'px-3 py-1.5 rounded-lg text-xs font-bold text-amber-300 bg-amber-500/20 border border-amber-500/40' : 
+              'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-amber-400 bg-slate-950 border border-slate-900'">
+            🟡 O'rtacha (Medium)
+          </button>
+
+          <button 
+            (click)="setDifficulty('Qiyin')"
+            [class]="activeDifficulty() === 'Qiyin' ? 
+              'px-3 py-1.5 rounded-lg text-xs font-bold text-rose-300 bg-rose-500/20 border border-rose-500/40' : 
+              'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-rose-400 bg-slate-950 border border-slate-900'">
+            🔴 Qiyin (Hard)
+          </button>
         </div>
+
       </div>
 
       <!-- Quiz Grid -->
@@ -102,26 +152,30 @@ import { QuizCategory } from '../../models/quiz.model';
           @for (quiz of searchedQuizzes(); track quiz.id) {
             <div class="glass-card glass-card-hover rounded-2xl p-6 flex flex-col justify-between border border-slate-800 relative group">
               
-              <!-- Top Badges -->
+              <!-- Top Badges & Stars -->
               <div>
                 <div class="flex items-center justify-between mb-4">
-                  <span [class]="getDifficultyBadgeClass(quiz.difficulty)">
-                    {{ quiz.difficulty }}
-                  </span>
+                  <div class="flex items-center gap-2">
+                    <span [class]="getDifficultyBadgeClass(quiz.difficulty)">
+                      {{ quiz.difficulty }}
+                    </span>
+                    
+                    <!-- Stars Rating Badge for Quiz Attempt History -->
+                    @if (getBestQuizStars(quiz.id); as stars) {
+                      @if (stars > 0) {
+                        <span class="px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                          <span>⭐</span>
+                          <span>{{ stars }}/5</span>
+                        </span>
+                      }
+                    }
+                  </div>
                   
                   <div class="flex items-center gap-2">
                     @if (quiz.isCustom) {
                       <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
                         Maxsus
                       </span>
-                      <button 
-                        (click)="quizService.deleteQuiz(quiz.id)" 
-                        title="O'chirish"
-                        class="text-slate-500 hover:text-rose-400 transition p-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
                     }
                     <span class="text-xs text-slate-300 flex items-center gap-1 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800 font-medium">
                       <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -141,23 +195,40 @@ import { QuizCategory } from '../../models/quiz.model';
                 </p>
               </div>
 
-              <!-- Footer Info & Start Button -->
-              <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
+              <!-- Footer Info & Action Buttons -->
+              <div class="pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
                 <div class="flex items-center gap-1.5 text-xs text-slate-300">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span class="font-bold text-white">{{ quiz.questions.length }}</span> ta savol
+                  <span class="font-bold text-white">{{ quiz.questions.length }}</span> ta
                 </div>
 
-                <button 
-                  (click)="quizService.startQuiz(quiz.id)"
-                  class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95">
-                  Testni Boshlash
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </button>
+                <div class="flex items-center gap-2">
+                  <!-- Certificate Button if score >= 70% -->
+                  @if (getPassingAttemptId(quiz.id); as attemptId) {
+                    <button 
+                      (click)="openCertificate(attemptId)"
+                      title="Sertifikatni yuklab olish"
+                      class="px-2.5 py-1.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 transition">
+                      🎓 Sertifikat
+                    </button>
+                  }
+
+                  <!-- Start / Retake Button -->
+                  <button 
+                    (click)="quizService.startQuiz(quiz.id)"
+                    class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95">
+                    @if (getBestQuizStars(quiz.id) > 0) {
+                      <span>🔄 Qayta yechish</span>
+                    } @else {
+                      <span>Testni Boshlash</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    }
+                  </button>
+                </div>
               </div>
 
             </div>
@@ -172,27 +243,64 @@ import { QuizCategory } from '../../models/quiz.model';
             </svg>
           </div>
           <h3 class="text-base font-bold text-white mb-2">Hech qanday test topilmadi</h3>
-          <p class="text-xs text-slate-400 mb-6">Siz qidirgan so'rov bo'yicha testlar mavjud emas.</p>
+          <p class="text-xs text-slate-400 mb-6">Siz qidirgan qiyinchilik va mezonlar bo'yicha testlar mavjud emas.</p>
           <button 
-            (click)="searchTerm.set(''); quizService.selectCategory('all')"
+            (click)="searchTerm.set(''); setDifficulty('all'); quizService.selectCategory('all')"
             class="px-4 py-2 rounded-xl text-xs font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition">
             Barcha testlarni ko'rish
           </button>
         </div>
       }
 
+      <!-- Certificate Modal View -->
+      @if (selectedCertificate()) {
+        <app-certificate-modal 
+          [certificate]="selectedCertificate()"
+          (closeModal)="selectedCertificate.set(null)">
+        </app-certificate-modal>
+      }
+
     </div>
   `
 })
-export class QuizListComponent {
+export class QuizListComponent implements OnInit {
   readonly quizService = inject(QuizService);
+  readonly apiService = inject(QuizApiService);
   readonly Math = Math;
 
   readonly searchTerm = signal<string>('');
+  readonly activeDifficulty = signal<string>('all');
+  readonly selectedCertificate = signal<CertificateData | null>(null);
+
+  readonly categoryProgressList = signal<CategoryProgress[]>([]);
+
+  ngOnInit(): void {
+    this.apiService.getCategoryProgress(this.quizService.currentUserName()).subscribe(progress => {
+      if (progress && progress.length > 0) {
+        this.categoryProgressList.set(progress);
+      }
+    });
+  }
+
+  setDifficulty(diff: string): void {
+    this.activeDifficulty.set(diff);
+  }
 
   readonly searchedQuizzes = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
-    const filtered = this.quizService.filteredQuizzes();
+    const diff = this.activeDifficulty().toLowerCase();
+    let filtered = this.quizService.filteredQuizzes();
+
+    if (diff !== 'all') {
+      filtered = filtered.filter(q => {
+        const qDiff = q.difficulty.toLowerCase();
+        if (diff === 'medium' || diff === "o'rta") {
+          return qDiff.includes('rta') || qDiff === 'medium';
+        }
+        return qDiff === diff;
+      });
+    }
+
     if (!term) return filtered;
 
     return filtered.filter(q => 
@@ -202,11 +310,63 @@ export class QuizListComponent {
     );
   });
 
+  getCategoryStars(catId: string): number {
+    const found = this.categoryProgressList().find(p => p.category.toLowerCase() === catId.toLowerCase());
+    return found ? found.starsCount : 0;
+  }
+
+  getBestQuizStars(quizId: string): number {
+    const history = this.quizService.quizHistory();
+    const attempts = history.filter(h => h.quizId === quizId);
+    if (!attempts.length) return 0;
+
+    const maxScore = Math.max(...attempts.map(a => a.scorePercentage));
+    if (maxScore > 80) return 5;
+    if (maxScore > 60) return 4;
+    if (maxScore > 40) return 3;
+    if (maxScore > 20) return 2;
+    if (maxScore > 0) return 1;
+    return 0;
+  }
+
+  getPassingAttemptId(quizId: string): string | null {
+    const history = this.quizService.quizHistory();
+    const passing = history.find(h => h.quizId === quizId && h.scorePercentage >= 70);
+    return passing?.id || null;
+  }
+
+  openCertificate(attemptId: string): void {
+    this.apiService.getCertificate(attemptId).subscribe(cert => {
+      if (cert) {
+        this.selectedCertificate.set(cert);
+      } else {
+        const attempt = this.quizService.quizHistory().find(a => a.id === attemptId);
+        if (attempt) {
+          const stars = this.getBestQuizStars(attempt.quizId);
+          this.selectedCertificate.set({
+            certificateId: `CERT-${attemptId.substring(0, 8).toUpperCase()}`,
+            certificateCode: `CERT-QM-${attemptId.substring(0, 8).toUpperCase()}-2026`,
+            userName: this.quizService.currentUserName() || 'Dasturchi',
+            quizTitle: attempt.quizTitle,
+            categoryName: attempt.categoryName,
+            scorePercentage: attempt.scorePercentage,
+            starsCount: stars,
+            issuedAt: attempt.completedAt,
+            certificateUrl: '',
+            issuer: 'QuizMaster PRO Certification Board',
+            badgeTitle: stars === 5 ? 'Senior Certified Architect' : 'Certified Professional'
+          });
+        }
+      }
+    });
+  }
+
   getDifficultyBadgeClass(difficulty: string): string {
     switch (difficulty) {
       case 'Oson':
         return 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
       case 'O\'rta':
+      case 'Medium':
         return 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30';
       case 'Qiyin':
         return 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30';
