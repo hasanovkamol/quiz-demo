@@ -6,6 +6,8 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using QuizApi.Infrastructure.Persistence;
 using QuizApi.Core.Domain.Entities;
+using QuizApi.Core.Application.Interfaces;
+using QuizApi.Core.Application.Dtos;
 using UserEntity = QuizApi.Core.Domain.Entities.User;
 using TelegramUser = global::Telegram.Bot.Types.User;
 
@@ -256,6 +258,56 @@ public class TelegramBotService
                 await StartSequentialQuizSessionAsync(userId, chatId, category, difficulty);
             }
         }
+        else if (data.StartsWith("aihelp:"))
+        {
+            var parts = data.Split(':');
+            if (parts.Length >= 2 && int.TryParse(parts[1], out int qIndex))
+            {
+                if (_activeSessions.TryGetValue(userId, out var session) && qIndex >= 0 && qIndex < session.Questions.Count)
+                {
+                    await _botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "💡 AI savol va variantlarni tahlil qilmoqda...", showAlert: false);
+
+                    var question = session.Questions[qIndex];
+
+                    try
+                    {
+                        using var scope = _serviceProvider.CreateScope();
+                        var aiService = scope.ServiceProvider.GetRequiredService<ISemanticKernelQuizService>();
+
+                        var req = new AiQuestionExplainRequest(
+                            question.Text,
+                            question.CodeSnippet,
+                            question.Options.Select(o => o.Text).ToList(),
+                            null
+                        );
+
+                        var explanationText = await aiService.ExplainQuestionAsync(req);
+
+                        string formattedMsg = $"💡 <b>Semantic Kernel AI Tushuntirish (gemini-3.6-flash):</b>\n\n" +
+                                             $"{HtmlEncode(explanationText)}";
+
+                        await _botClient.SendTextMessageAsync(
+                            chatId: chatId,
+                            text: formattedMsg,
+                            parseMode: ParseMode.Html
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error generating AI explanation for Telegram bot");
+                        await _botClient.SendTextMessageAsync(
+                            chatId: chatId,
+                            text: "⚠️ Sun'iy intellekt tushuntirishini shakllantirishda xatolik yuz berdi.",
+                            parseMode: ParseMode.Html
+                        );
+                    }
+                }
+                else
+                {
+                    await _botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "⚠️ Faol test topshirish sessiyasi topilmadi.", showAlert: true);
+                }
+            }
+        }
         else if (data.StartsWith("ans:"))
         {
             var parts = data.Split(':');
@@ -446,6 +498,11 @@ public class TelegramBotService
         {
             buttonsLayout.Add(row);
         }
+
+        buttonsLayout.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("💡 AI Yordam (Tushuntirish)", $"aihelp:{session.CurrentIndex}")
+        });
 
         var inlineKeyboard = new InlineKeyboardMarkup(buttonsLayout);
 
