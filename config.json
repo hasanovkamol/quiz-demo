@@ -1,7 +1,7 @@
 {
-  "apiUrl": "https://effectiveness-curriculum-injection-conditioning.trycloudflare.com/api",
+  "apiUrl": " https://biology-proposals-big-employer.trycloudflare.com/api",
   "keycloak": {
-    "url": "https://effectiveness-curriculum-injection-conditioning.trycloudflare.com/auth",
+    "url": " https://biology-proposals-big-employer.trycloudflare.com /auth",
     "realm": "quizmaster-realm",
     "clientId": "quizmaster-app"
   }
