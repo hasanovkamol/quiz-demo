@@ -216,29 +216,26 @@ JSON Formati:
     {
         var apiKey = request.ApiKey ?? configuration["Gemini:ApiKey"] ?? configuration["OpenAI:ApiKey"];
         var prompt = $@"
-Siz Senior Staff Software Architect va Dunyo miqyosidagi Texnik Ekspertsiz. 
-Sizning vazifangiz: ""{request.Topic}"" mavzusida professional va chuqur bilimni sinovchi AYNAN 1 TA SAVOLDAN IBORAT TEST SAVOLI VA UNING JAVOBLARINI YARATISH.
+Siz IT Ekspertsiz. ""{request.Topic}"" mavzusida ekspert darajasidagi 1 ta aniq test savoli va variantlarini yarating.
 
-QOIDALAR VA SIFAT TALABLARI:
-1. SAVOL SHUNCAKI NAZARIY EMAS, BALKI REAL MUAMMOLAR, SCENARIYLAR VA KOD TAHLILIGA (codeSnippet) ASOSLANGAN BO'LSIN.
-2. Variantlar (options): 4 ta variant berilsin. Ularning 3 tasi mantiqan ishontirarli (lekin xato), 1 tasi mutloq to'g'ri bo'lsin. Variantlar bir-birini takrorlamasin.
-3. To'g'ri javob uchun nima uchun aynan shu javob to'g'riligi haqida batafsil izoh (explanation) berilsin.
-4. Til: O'zbek tili (IT terminlari va kod elementlari inglizcha saqlansin).
-5. Qiyinchilik darajasi: {request.Difficulty.ToUpper()}
-6. Natijani FAQAT VA FAQAT yaroqli JSON formatida qaytaring. Markdown teglar (```json) yozmang!
+Talablar:
+1. Savol lo'nda, qisqa va amaliy bo'lsin.
+2. 4 ta variant (1 to'g'ri, 3 ta mantiqiy xato).
+3. To'g'ri javob uchun savol bo'yicha ekspert darajasida qisqa va lo'nda izoh (explanation) bering.
+4. Qiyinchilik darajasi: {request.Difficulty.ToUpper()}. Til: O'zbek tili (IT terminlari inglizcha).
+5. Natijani FAQAT VA FAQAT yaroqli JSON formatida qaytaring (```json teglarsiz):
 
-JSON Formati:
 {{
-  ""text"": ""Aniq va professional savol matni"",
-  ""codeSnippet"": ""Real va to'g'ri yozilgan kod parchasi yoki null"",
+  ""text"": ""Savol matni"",
+  ""codeSnippet"": ""Kod parchasi yoki null"",
   ""options"": [
-    ""Variant A (Plauzibil xato)"",
-    ""Variant B (To'g'ri javob)"",
-    ""Variant C (Plauzibil xato)"",
-    ""Variant D (Plauzibil xato)""
+    ""Variant A"",
+    ""Variant B"",
+    ""Variant C"",
+    ""Variant D""
   ],
   ""correctIndex"": 1,
-  ""explanation"": ""To'g'ri javob nega to'g'ri ekanligi haqida batafsil izoh.""
+  ""explanation"": ""Savol bo'yicha ekspert darajasidagi qisqa va lo'nda izoh.""
 }}
 ";
 
@@ -346,25 +343,14 @@ JSON Formati:
             return "Iltimos, tushuntirilishi kerak bo'lgan savolni kiriting.";
         }
 
-        var optionsFormatted = string.Join("\n", request.Options.Select((o, idx) => $"{(char)('A' + idx)}) {o}"));
         var codePart = !string.IsNullOrWhiteSpace(request.CodeSnippet) ? $"\n\nKod Parchasi:\n```\n{request.CodeSnippet}\n```" : "";
 
         var prompt = $@"
-Siz dasturlash va IT sohasidagi Senior Ekspert hamda O'qituvchisiz.
-Quyidagi savol va javob variantlarini o'zbek tilida, nihoyatda tushunarli, o'rgatuvchi (educational) va qiziqarli tarzda tushuntirib bering:
+Siz IT Ekspertsiz. Quyidagi savol va uning mazmunini ekspert darajasida qisqa va lo'nda tahlil qilib bering (faqat savol tahlili):
 
 Savol: {request.QuestionText}{codePart}
 
-Variantlar:
-{optionsFormatted}
-
-Iltimos, tushuntirishda quyidagi ketma-ketlik va struktura bo'yicha javob bering:
-1. 🎯 **Savolning Asosiy Mazmuni**: Savol nimani so'rayotgani haqida qisqacha xulosa.
-2. ✅ **To'g'ri Javob Tahlili**: Qaysi variant to'g'riligi va nima uchun ushbu variant to'g'ri ekanligining mantiqiy sababi.
-3. ❌ **Noto'g'ri Variantlar**: Nima uchun boshqa variantlar ushbu holatda to'g'ri kelmasligi.
-4. 💡 **Ekspert Maslahati (Best Practice)**: Ushbu mavzuga oid real amaliyotdagi foydali maslahat.
-
-Javobni o'zbek tilida, aniq va tushunarli matn shaklida bering.";
+Javobni o'zbek tilida, ortiqcha bo'limlarsiz, faqat savolning mohiyati va to'g'ri javob mantiqining ekspertcha qisqa tahlili shaklida bering.";
 
         string apiKey = !string.IsNullOrWhiteSpace(request.ApiKey)
             ? request.ApiKey
