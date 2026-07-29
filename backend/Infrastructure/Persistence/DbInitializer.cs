@@ -41,7 +41,7 @@ public static class DbInitializer
             await SeedComprehensiveQuizzesAsync(context);
         }
     }
-
+  
     public static async Task SeedComprehensiveQuizzesAsync(QuizDbContext context)
     {
         var existingQuizzes = await context.Quizzes.ToListAsync();
