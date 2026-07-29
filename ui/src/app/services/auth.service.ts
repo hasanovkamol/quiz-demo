@@ -66,32 +66,51 @@ export class AuthService
 
   private initTelegramAuth(): void
   {
-    let retries = 30;
+    let retries = 20;
     const attemptAuth = () => {
-      if (this.telegramWebApp.isTelegramWebApp() && this.telegramWebApp.initData)
+      const isTg = this.telegramWebApp.isTelegramWebApp();
+      const user = this.telegramWebApp.telegramUser();
+      const tgUserId = user?.id || 0;
+
+      if (isTg || tgUserId > 0)
       {
-        const user = this.telegramWebApp.telegramUser();
-        const tgUserId = user?.id || 0;
         const username = user?.username || '';
-        const name = this.telegramWebApp.getFormattedUserName() || 'Telegram User';
+        const name = this.telegramWebApp.getFormattedUserName() || (user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'Telegram User');
         const initData = this.telegramWebApp.initData;
 
-        if (tgUserId > 0 && !this.token())
+        // Immediate client-side user fallback so UI is NEVER blocked
+        if (!this.currentUser())
+        {
+          const cleanUsername = (username || '').toLowerCase().replace('@', '');
+          const isAdmin = cleanUsername === 'hasanovkamol';
+          const fallbackUser: User = {
+            id: (tgUserId > 0 ? tgUserId : 'tg_guest').toString(),
+            email: `${tgUserId}@telegram.user`,
+            name: name || 'Telegram User',
+            pictureUrl: user?.photo_url || '',
+            role: isAdmin ? 'Admin' : 'User',
+            permissions: isAdmin ? ['admin:stats', 'users:manage', 'quiz:create', 'quiz:delete'] : []
+          };
+          this.currentUser.set(fallbackUser);
+        }
+
+        // Attempt backend JWT auth in background
+        if (tgUserId > 0 && initData)
         {
           this.telegramLogin(tgUserId, username, name, initData).subscribe({
-            next: () => console.log('Telegram WebApp Auto-Authenticated successfully!'),
-            error: (err) => console.warn('Telegram WebApp Auth error:', err)
+            next: () => console.log('Telegram WebApp Auto-Authenticated with Backend JWT!'),
+            error: (err) => console.warn('Telegram WebApp Backend Auth fallback active:', err)
           });
         }
       } else if (retries > 0) {
         retries--;
-        setTimeout(attemptAuth, 150);
+        setTimeout(attemptAuth, 100);
       }
     };
     attemptAuth();
   }
 
-  telegramLogin(telegramUserId: number, username?: string, name?: string, initData?: string): Observable<AuthResponse>
+  telegramLogin(telegramUserId: number, username?: string, name?: string, initData?: string): Observable<AuthResponse | null>
   {
     return this.http.post<AuthResponse>(`${this.apiBase}/telegram/auth`, {
       telegramUserId,
@@ -99,7 +118,11 @@ export class AuthService
       name,
       initData
     }).pipe(
-      tap(res => this.handleAuthSuccess(res))
+      tap(res => this.handleAuthSuccess(res)),
+      catchError(err => {
+        console.warn('Telegram backend login error, keeping client-side Telegram profile:', err);
+        return of(null);
+      })
     );
   }
 
