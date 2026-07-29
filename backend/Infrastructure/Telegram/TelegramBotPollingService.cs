@@ -29,10 +29,12 @@ public class TelegramBotPollingService : BackgroundService
         {
             await _botClient.SetMyCommandsAsync(new[]
             {
-                new BotCommand { Command = "quiz", Description = "Test topshirish (Ketma-ket savollar)" },
-                new BotCommand { Command = "results", Description = "Test natijalaringiz tarixi (Pagination)" },
-                new BotCommand { Command = "stats", Description = "Shaxsiy statistikangiz" },
-                new BotCommand { Command = "leaderboard", Description = "Top dasturchilar reytingi" }
+                new BotCommand { Command = "quiz", Description = "🚀 Test topshirish (Kategoriyalar)" },
+                new BotCommand { Command = "results", Description = "📋 Natijalaringiz tarixi (Pagination)" },
+                new BotCommand { Command = "stats", Description = "📊 Shaxsiy statistikangiz" },
+                new BotCommand { Command = "leaderboard", Description = "🏆 Top dasturchilar reytingi (Admin)" },
+                new BotCommand { Command = "donate", Description = "❤️ Loyihani qo'llab-quvvatlash (Donation)" },
+                new BotCommand { Command = "start", Description = "🔄 Botni qayta ishga tushirish" }
             }, cancellationToken: stoppingToken);
 
             // Clean up and overwrite any old/spam description on the bot profile

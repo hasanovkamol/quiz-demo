@@ -81,19 +81,36 @@ public class TelegramBotService
 
     public static ReplyKeyboardMarkup GetPersistentTabKeyboard()
     {
-        return new ReplyKeyboardMarkup(new[]
+        var webAppUrl = Environment.GetEnvironmentVariable("TELEGRAM_WEBAPP_URL") ?? "";
+
+        var rows = new List<List<KeyboardButton>>();
+
+        if (!string.IsNullOrWhiteSpace(webAppUrl) && webAppUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            new[]
+            rows.Add(new List<KeyboardButton>
             {
-                new KeyboardButton("🚀 Test Yechish (/quiz)"),
-                new KeyboardButton("📋 Natijalarim (/results)")
-            },
-            new[]
-            {
-                new KeyboardButton("📊 Statistikam (/stats)"),
-                new KeyboardButton("🏆 Reyting (/leaderboard)")
-            }
-        })
+                KeyboardButton.WithWebApp("📱 Mini App-ni Ochish", new WebAppInfo { Url = webAppUrl })
+            });
+        }
+
+        rows.Add(new List<KeyboardButton>
+        {
+            new KeyboardButton("🚀 Test Yechish (/quiz)"),
+            new KeyboardButton("📋 Natijalarim (/results)")
+        });
+
+        rows.Add(new List<KeyboardButton>
+        {
+            new KeyboardButton("📊 Statistikam (/stats)"),
+            new KeyboardButton("🏆 Reyting (/leaderboard)")
+        });
+
+        rows.Add(new List<KeyboardButton>
+        {
+            new KeyboardButton("❤️ Donation (/donate)")
+        });
+
+        return new ReplyKeyboardMarkup(rows.Select(r => r.ToArray()))
         {
             ResizeKeyboard = true,
             IsPersistent = true
@@ -126,11 +143,15 @@ public class TelegramBotService
         {
             await SendLeaderboardAsync(chatId, message.From);
         }
+        else if (text.StartsWith("/donate") || text.Contains("Donation"))
+        {
+            await SendDonationMessageAsync(chatId);
+        }
         else
         {
             await _botClient.SendTextMessageAsync(
                 chatId: chatId,
-                text: "📌 **Buyruqlar va Tab Menyusi:**\n\n/quiz — Test ishlashni boshlash\n/results — Natijalaringiz tarixi\n/stats — Shaxsiy statistikangiz\n/leaderboard — Top dasturchilar reytingi",
+                text: "📌 **Buyruqlar va Tab Menyusi:**\n\n/quiz — Test ishlashni boshlash\n/results — Natijalaringiz tarixi\n/stats — Shaxsiy statistikangiz\n/leaderboard — Top dasturchilar reytingi\n/donate — Loyihani qo'llab-quvvatlash (Donation)",
                 parseMode: ParseMode.Markdown,
                 replyMarkup: GetPersistentTabKeyboard()
             );
@@ -160,6 +181,11 @@ public class TelegramBotService
             InlineKeyboardButton.WithCallbackData("🏆 Reyting", "showleaderboard"),
         });
 
+        buttons.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("❤️  Donation", "donationshow")
+        });
+
         var inlineKeyboard = new InlineKeyboardMarkup(buttons);
 
         string welcomeText = $"<b>Assalomu alaykum, {name}!</b> 🇺🇿\n\n" +
@@ -167,19 +193,20 @@ public class TelegramBotService
                              $"Ushbu bot orqali siz IT sohasidagi barcha senior darajadagi professional testlarni topshirishingiz va o'z natijalaringiz tarixini ko'rishingiz mumkin.\n\n" +
                              $"👇 <b>Kategoriyani tanlang yoki quyidagi Tab menyusidan foydalaning:</b>";
 
-        // Send persistent Tab Menu keyboard
+        // 1. Send persistent Tab Menu keyboard first
+        await _botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: "💬 <b>Tezkor Tab menyusi va buyruqlar faollashtirildi:</b>",
+            parseMode: ParseMode.Html,
+            replyMarkup: GetPersistentTabKeyboard()
+        );
+
+        // 2. Send Inline Keyboard welcome message bubble
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
             text: welcomeText,
             parseMode: ParseMode.Html,
             replyMarkup: inlineKeyboard
-        );
-
-        // Also ensure bottom persistent tab bar is displayed
-        await _botClient.SendTextMessageAsync(
-            chatId: chatId,
-            text: "💬 Pastdagi Tab tugmalari orqali tezkor buyruqlarni berishingiz mumkin:",
-            replyMarkup: GetPersistentTabKeyboard()
         );
     }
 
@@ -298,6 +325,10 @@ public class TelegramBotService
         else if (data == "showleaderboard")
         {
             await SendLeaderboardAsync(chatId, callbackQuery.From);
+        }
+        else if (data == "donationshow")
+        {
+            await SendDonationMessageAsync(chatId);
         }
         else if (data.StartsWith("cat:"))
         {
@@ -827,6 +858,51 @@ public class TelegramBotService
         }
 
         await _botClient.SendTextMessageAsync(chatId, text, parseMode: ParseMode.Html);
+    }
+
+    private async Task SendDonationMessageAsync(long chatId)
+    {
+        string donationText = "⭐️ <b>Telegram Stars Orqali Loyihani qo'llab quvatlash (Donation)</b>\n\n" +
+                             "Hurmatli dasturchi! <b>QuizMaster PRO</b> loyihasi bepul ochiq platforma bo'lib, senior dasturchilar va IT hamjamiyatini rivojlantirishga xizmat qiladi.\n\n" +
+                             "Siz loyiha rivojiga, sun'iy intellekt (AI) infratuzilmasiga hamda server xarajatlariga Telegram Stars ⭐️ orqali o'z hissangizni qo'shishingiz mumkin.\n\n" +
+                             "👇 <b>Qo'llab-quvvatlash miqdorini (Telegram Stars) tanlang:</b>";
+
+        var buttons = new List<List<InlineKeyboardButton>>
+        {
+            new List<InlineKeyboardButton>
+            {
+                InlineKeyboardButton.WithCallbackData("⭐️ 1 Telegram Stars", "star_donate:1"),
+                InlineKeyboardButton.WithCallbackData("⭐️ 2 Telegram Stars", "star_donate:2")
+            },
+            new List<InlineKeyboardButton>
+            {
+                InlineKeyboardButton.WithCallbackData("⭐️ 10 Telegram Stars", "star_donate:10"),
+                InlineKeyboardButton.WithCallbackData("⭐️ 15 Telegram Stars", "star_donate:15")
+            }
+        };
+
+        await _botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: donationText,
+            parseMode: ParseMode.Html,
+            replyMarkup: new InlineKeyboardMarkup(buttons)
+        );
+    }
+
+    private async Task SendTelegramStarsInvoiceAsync(long chatId, int starsAmount)
+    {
+        await _botClient.SendInvoiceAsync(
+            chatId: chatId,
+            title: $"⭐️ {starsAmount} Telegram Stars",
+            description: $"QuizMaster PRO loyihasi va AI infratuzilmasi uchun {starsAmount} ⭐️ Telegram Stars qilish.",
+            payload: $"donation_{starsAmount}_stars",
+            currency: "XTR",
+            prices: new[]
+            {
+                new global::Telegram.Bot.Types.Payments.LabeledPrice($"⭐️ {starsAmount} Telegram Stars", starsAmount)
+            },
+            providerToken: ""
+        );
     }
 
     private async Task<UserEntity> GetOrCreateTelegramUserAsync(QuizDbContext dbContext, TelegramUser tgUser)
