@@ -15,6 +15,13 @@ export interface AiSingleQuestionRequest {
   apiKey?: string;
 }
 
+export interface AiQuestionExplainRequest {
+  questionText: string;
+  codeSnippet?: string;
+  options: string[];
+  apiKey?: string;
+}
+
 
 export interface QuestionOption {
   id: string;

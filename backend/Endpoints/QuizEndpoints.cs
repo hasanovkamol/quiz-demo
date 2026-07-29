@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using QuizApi.Core.Application.Interfaces;
 using QuizApi.Core.Domain.Constants;
 using QuizApi.Core.Domain.Entities;
 using QuizApi.Infrastructure.Persistence;
@@ -72,6 +73,20 @@ public static class QuizEndpoints
             return TypedResults.NoContent();
         })
         .WithSummary("Testni o'chirish");
+
+        group.MapPost("/explain-question", async Task<Results<Ok<object>, BadRequest<object>>> (
+            QuizApi.Core.Application.Dtos.AiQuestionExplainRequest request,
+            ISemanticKernelQuizService aiQuizService) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.QuestionText))
+            {
+                return TypedResults.BadRequest<object>(new { message = "Iltimos, tushuntirilishi kerak bo'lgan savol matnini yuboring!" });
+            }
+
+            var explanation = await aiQuizService.ExplainQuestionAsync(request);
+            return TypedResults.Ok<object>(new { explanation });
+        })
+        .WithSummary("Test yechish jarayonida savol bo'yicha AI dan batafsil tushuntirish va yordam olish");
 
         return group;
     }

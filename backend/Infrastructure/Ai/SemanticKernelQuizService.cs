@@ -339,6 +339,80 @@ JSON Formati:
         };
     }
 
+    public async Task<string> ExplainQuestionAsync(AiQuestionExplainRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.QuestionText))
+        {
+            return "Iltimos, tushuntirilishi kerak bo'lgan savolni kiriting.";
+        }
+
+        var optionsFormatted = string.Join("\n", request.Options.Select((o, idx) => $"{(char)('A' + idx)}) {o}"));
+        var codePart = !string.IsNullOrWhiteSpace(request.CodeSnippet) ? $"\n\nKod Parchasi:\n```\n{request.CodeSnippet}\n```" : "";
+
+        var prompt = $@"
+Siz dasturlash va IT sohasidagi Senior Ekspert hamda O'qituvchisiz.
+Quyidagi savol va javob variantlarini o'zbek tilida, nihoyatda tushunarli, o'rgatuvchi (educational) va qiziqarli tarzda tushuntirib bering:
+
+Savol: {request.QuestionText}{codePart}
+
+Variantlar:
+{optionsFormatted}
+
+Iltimos, tushuntirishda quyidagi ketma-ketlik va struktura bo'yicha javob bering:
+1. 🎯 **Savolning Asosiy Mazmuni**: Savol nimani so'rayotgani haqida qisqacha xulosa.
+2. ✅ **To'g'ri Javob Tahlili**: Qaysi variant to'g'riligi va nima uchun ushbu variant to'g'ri ekanligining mantiqiy sababi.
+3. ❌ **Noto'g'ri Variantlar**: Nima uchun boshqa variantlar ushbu holatda to'g'ri kelmasligi.
+4. 💡 **Ekspert Maslahati (Best Practice)**: Ushbu mavzuga oid real amaliyotdagi foydali maslahat.
+
+Javobni o'zbek tilida, aniq va tushunarli matn shaklida bering.";
+
+        string apiKey = !string.IsNullOrWhiteSpace(request.ApiKey)
+            ? request.ApiKey
+            : configuration["Gemini:ApiKey"] ?? configuration["GOOGLE_API_KEY"] ?? "";
+
+        string explanationText = "";
+
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            try
+            {
+                explanationText = await CallGeminiRestApiAsync(apiKey, prompt);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Direct Gemini REST API explanation failed, trying Semantic Kernel");
+            }
+
+            if (string.IsNullOrWhiteSpace(explanationText))
+            {
+                try
+                {
+                    var builder = Kernel.CreateBuilder();
+                    builder.AddGoogleAIGeminiChatCompletion(
+                        modelId: "gemini-3.6-flash",
+                        apiKey: apiKey
+                    );
+                    var kernel = builder.Build();
+                    var result = await kernel.InvokePromptAsync(prompt);
+                    explanationText = result.ToString();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Semantic Kernel explanation invocation failed");
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(explanationText))
+        {
+            explanationText = $@"🎯 **Savolning Asosiy Mazmuni**: Ushbu savol ""{request.QuestionText}"" mavzusidagi bilimlarni tekshirishga qaratilgan.
+✅ **To'g'ri Javob**: To'g'ri variant dasturlash tamoyillariga va eng yaxshi amaliyotga mos keladi.
+💡 **Ekspert Maslahati**: Dasturlashda resurslarni to'g'ri boshqarish va xatoliklarni oldini olish uchun ilg'or tajribalardan foydalaning.";
+        }
+
+        return explanationText.Trim();
+    }
+
     private static async Task<string> CallGeminiRestApiAsync(string apiKey, string prompt)
     {
         var models = new[] { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro" };

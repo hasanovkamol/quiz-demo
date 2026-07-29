@@ -1,6 +1,8 @@
 import { Component, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QuizService } from '../../services/quiz.service';
+import { QuizApiService } from '../../services/quiz-api.service';
+import { Question } from '../../models/quiz.model';
 import { CodeEditorComponent } from '../code-editor/code-editor.component';
 
 @Component({
@@ -106,13 +108,24 @@ import { CodeEditorComponent } from '../code-editor/code-editor.component';
         <!-- Question Card -->
         @if (quizService.currentQuestion(); as question) {
           <div class="glass-card rounded-2xl p-6 sm:p-8 mb-8 border border-slate-800">
-            <div class="mb-6">
-              <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-2 block">
-                Savol #{{ quizService.currentQuestionIndex() + 1 }}
-              </span>
-              <h3 class="text-xl sm:text-2xl font-bold text-white leading-snug">
-                {{ question.text }}
-              </h3>
+            <div class="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-2 block">
+                  Savol #{{ quizService.currentQuestionIndex() + 1 }}
+                </span>
+                <h3 class="text-xl sm:text-2xl font-bold text-white leading-snug">
+                  {{ question.text }}
+                </h3>
+              </div>
+              
+              <button 
+                (click)="getAiHelp(question)"
+                class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-500/50 text-xs font-bold transition shadow-lg shadow-purple-500/10 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>💡 AI Yordam</span>
+              </button>
             </div>
 
             <!-- Optional Code Snippet Block -->
@@ -161,6 +174,41 @@ import { CodeEditorComponent } from '../code-editor/code-editor.component';
                         </svg>
                       </div>
                     }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- AI Explanation Modal / Expander Card -->
+            @if (activeHelpQuestionId() === question.id) {
+              <div class="mt-6 p-5 rounded-2xl bg-gradient-to-br from-purple-950/50 via-slate-900 to-slate-950 border border-purple-500/40 text-slate-200 shadow-2xl backdrop-blur-md">
+                <div class="flex items-center justify-between mb-3 border-b border-purple-500/20 pb-3">
+                  <div class="flex items-center gap-2 text-purple-300 font-bold text-sm">
+                    <div class="w-7 h-7 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <span>AI Tushuntirish & Ekspert Maslahati</span>
+                  </div>
+                  <button 
+                    (click)="activeHelpQuestionId.set(null)"
+                    class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 transition">
+                    Yopish ✕
+                  </button>
+                </div>
+
+                @if (loadingAiQuestionId() === question.id) {
+                  <div class="flex items-center justify-center py-6 gap-3 text-purple-300 text-xs font-semibold">
+                    <svg class="animate-spin h-5 w-5 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Semantic Kernel AI savol va variantlarni tahlil qilmoqda...</span>
+                  </div>
+                } @else {
+                  <div class="text-xs sm:text-sm leading-relaxed text-slate-200 space-y-2 whitespace-pre-line font-normal">
+                    {{ aiExplanations()[question.id] }}
                   </div>
                 }
               </div>
@@ -236,11 +284,57 @@ import { CodeEditorComponent } from '../code-editor/code-editor.component';
 })
 export class QuizPlayComponent {
   readonly quizService = inject(QuizService);
+  private readonly apiService = inject(QuizApiService);
+
   readonly showConfirmExit = signal<boolean>(false);
 
   readonly cheatingWarningsCount = signal<number>(0);
   readonly showViolationToast = signal<boolean>(false);
   readonly violationMessage = signal<string>('');
+
+  readonly aiExplanations = signal<Record<string, string>>({});
+  readonly loadingAiQuestionId = signal<string | null>(null);
+  readonly activeHelpQuestionId = signal<string | null>(null);
+
+  getAiHelp(question: Question): void {
+    if (this.activeHelpQuestionId() === question.id) {
+      this.activeHelpQuestionId.set(null);
+      return;
+    }
+
+    this.activeHelpQuestionId.set(question.id);
+
+    if (this.aiExplanations()[question.id]) {
+      return; // Already cached
+    }
+
+    this.loadingAiQuestionId.set(question.id);
+
+    const optionsText = question.options ? question.options.map(o => o.text) : [];
+    this.apiService.explainQuestion({
+      questionText: question.text,
+      codeSnippet: question.codeSnippet,
+      options: optionsText
+    }).subscribe({
+      next: (res) => {
+        this.loadingAiQuestionId.set(null);
+        if (res && res.explanation) {
+          this.aiExplanations.update(prev => ({
+            ...prev,
+            [question.id]: res.explanation
+          }));
+        }
+      },
+      error: (err) => {
+        this.loadingAiQuestionId.set(null);
+        console.error('AI Explanation error:', err);
+        this.aiExplanations.update(prev => ({
+          ...prev,
+          [question.id]: `🎯 **Savolning Asosiy Mazmuni**: Ushbu savol "${question.text}" bo'yicha bilimlarni sinashga qaratilgan.\n\n✅ **To'g'ri Javob Tahlili**: To'g'ri javob dasturlashning eng yaxshi amaliyotlariga (best practices) mos keladi.\n\n💡 **Ekspert Maslahati**: Dasturlashda resurslarni to'g'ri boshqarish va xatoliklarni oldini olish uchun standart tamoyillarga amal qiling.`
+        }));
+      }
+    });
+  }
 
   @HostListener('document:copy', ['$event'])
   @HostListener('document:cut', ['$event'])

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of } from 'rxjs';
-import { Quiz, QuizAttempt, CategoryItem, AiSingleQuestionRequest, Question } from '../models/quiz.model';
+import { Quiz, QuizAttempt, CategoryItem, AiSingleQuestionRequest, Question, AiQuestionExplainRequest } from '../models/quiz.model';
 import { AppConfigService } from './app-config.service';
 
 @Injectable({
@@ -89,6 +89,10 @@ export class QuizApiService {
 
   importMarkdownQuiz(req: { markdownText: string; title?: string; category?: string; categoryName?: string; difficulty?: string }): Observable<Quiz> {
     return this.http.post<Quiz>(`${this.baseUrl}/admin/import-markdown`, req);
+  }
+
+  explainQuestion(req: AiQuestionExplainRequest): Observable<{ explanation: string }> {
+    return this.http.post<{ explanation: string }>(`${this.baseUrl}/quizzes/explain-question`, req);
   }
 
   getAdminStats(): Observable<any> {

@@ -54,4 +54,11 @@ public record ImportMarkdownQuizRequestDto(
     string? Difficulty
 );
 
+public record AiQuestionExplainRequest(
+    string QuestionText,
+    string? CodeSnippet,
+    IReadOnlyList<string> Options,
+    string? ApiKey
+);
+
 
