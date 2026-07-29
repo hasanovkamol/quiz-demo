@@ -57,6 +57,14 @@ import { KeycloakService } from '../../services/keycloak.service';
             }
           </div>
 
+          <!-- Biz Haqimizda Link -->
+          <a 
+            href="/about" 
+            target="_blank"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:bg-slate-800 hover:text-white transition">
+            <span>ℹ️</span> Biz Haqimizda
+          </a>
+
           <!-- USER PORTAL ACTIONS -->
           @if (activePortal() === 'user') {
             @if (quizService.quizHistory().length > 0) {

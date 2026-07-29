@@ -42,16 +42,16 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
+          cache-dependency-path: quiz-ui/package-lock.json
 
       - name: Install UI Dependencies
-        run: npm --prefix ui install --legacy-peer-deps
+        run: npm --prefix quiz-ui install --legacy-peer-deps
 
       - name: Run Angular UI Unit Tests
-        run: npm --prefix ui run test
+        run: npm --prefix quiz-ui run test
 
       - name: Build Angular Production Bundle
-        run: npm --prefix ui run build
+        run: npm --prefix quiz-ui run build
 
   docker-verification:
     name: Docker Compose Infrastructure Validation

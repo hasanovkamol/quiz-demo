@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   deploy-github-pages:
-    name: Deploy Angular UI to GitHub Pages
+    name: Deploy Angular & About UIs to GitHub Pages
     runs-on: ubuntu-latest
 
     steps:
@@ -25,18 +25,23 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
+          cache-dependency-path: quiz-ui/package-lock.json
 
-      - name: Install UI Dependencies
-        run: npm --prefix ui install --legacy-peer-deps
+      - name: Install Quiz UI Dependencies
+        run: npm --prefix quiz-ui install --legacy-peer-deps
 
       - name: Build Angular SPA for Production
-        run: npm --prefix ui run build -- --base-href /quiz-demo/
+        run: npm --prefix quiz-ui run build -- --base-href /quiz-demo/
+
+      - name: Copy About UI to Output Directory
+        run: |
+          mkdir -p quiz-ui/dist/quiz-app/browser/about
+          cp -r about-ui/* quiz-ui/dist/quiz-app/browser/about/
 
       - name: Deploy to GitHub Pages Branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: ui/dist/quiz-app/browser
+          folder: quiz-ui/dist/quiz-app/browser
           branch: gh-pages
 
   publish-docker-ghcr:
@@ -64,6 +69,14 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}/backend:latest
+
+      - name: Build and Push About UI Image to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./about-ui
+          file: ./about-ui/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/about-ui:latest
 
       - name: Build and Push Gateway Image to GHCR
         uses: docker/build-push-action@v5

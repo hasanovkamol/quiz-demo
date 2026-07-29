@@ -36,6 +36,10 @@ QuizMaster PRO is an enterprise-grade, microservice-ready Full-Stack assessment 
 - **White Theme Professional Certificate Generation**: `CertificateModalComponent` with white background, ~14px clean legible typography (Inter/Roboto font), gold geometric borders, user name, score percentage, stars rating, certificate code, issue date, QR verification payload, print/PDF export, and shareable link copying for scores >= 70%.
 
 20. **AI Automated Batch Refinement & Database Question Optimization**: [`docs/question-refinement-log.md`](./question-refinement-log.md) — Bazadagi barcha 774 ta savol va ularning 3,096 ta javob varianti 78 ta batch (10 tadan savol) bo'yicha tahlil qilindi va mukammallashtirildi. Noto'g'ri belgilangan to'g'ri javob variantlari hamda imlo/OCR xatolari tuzatilib, har bir savol uchun mukammallashgan matn, izoh va C#/TS/SQL code snippetlari ma'lumotlar bazasiga (`quizdb`) 100% muvaffaqiyatli saqlandi.
+21. **Dual UI Architecture & Folder Restructuring (`quiz-ui` & `about-ui`)**:
+    - **`quiz-ui`**: Asosiy Angular 18 SPA interaktiv test platformasi (eski `ui/` papkasi mantiqiy nom bilan `quiz-ui` ga o'zgartirildi).
+    - **`about-ui`**: Yangi "O'zimiz haqimizda" (About Us / Platform Landing Page) veb-ilovasi — QuizMaster PRO platformasi imkoniyatlari, AI integratsiyasi, Senior .NET 10 & Angular 18 arxitekturasi, muallif Kamoliddin Hasanov, Telegram Bot & Mini App hamda Telegram Stars (⭐️) qo'llab-quvvatlash xizmatlarini taqdim etuvchi zamonaviy glassmorphic platforma.
+    - **Docker & Gateway Routing**: `docker-compose.yml` da `quiz-ui` (port 8081) va `about-ui` (port 8083) servislar ajratildi. Nginx Gateway (`gateway/nginx.conf`) orqali `/about/` yo'nalishi `about-ui` ga hamda `/` yo'nalishi `quiz-ui` ga proxy qilindi.
 
 ---
 

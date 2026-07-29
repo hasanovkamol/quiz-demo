@@ -118,9 +118,9 @@ services:
       infisical:
         condition: service_started
 
-  ui:
+  quiz-ui:
     build:
-      context: ./ui
+      context: ./quiz-ui
       dockerfile: Dockerfile
     container_name: quiz_angular_ui
     ports:
@@ -129,6 +129,16 @@ services:
       - quiz-net
     depends_on:
       - backend
+
+  about-ui:
+    build:
+      context: ./about-ui
+      dockerfile: Dockerfile
+    container_name: quiz_about_ui
+    ports:
+      - "8083:80"
+    networks:
+      - quiz-net
 
   gateway:
     build:
@@ -140,7 +150,8 @@ services:
     networks:
       - quiz-net
     depends_on:
-      - ui
+      - quiz-ui
+      - about-ui
       - backend
       - keycloak
       - infisical
