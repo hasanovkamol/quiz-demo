@@ -18,6 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add Services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddMemoryCache();
 
 // CORS for LAN access
 builder.Services.AddCors(options =>

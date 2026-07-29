@@ -4,6 +4,8 @@ import { Observable, tap, catchError, of } from 'rxjs';
 import { User, AuthResponse } from '../models/user.model';
 import { AppConfigService } from './app-config.service';
 
+import { TelegramWebAppService } from './telegram-webapp.service';
+
 const LOCAL_STORAGE_TOKEN_KEY = 'quizmaster_jwt_token';
 const LOCAL_STORAGE_REFRESH_TOKEN_KEY = 'quizmaster_refresh_token';
 const LOCAL_STORAGE_USER_KEY = 'quizmaster_user_profile';
@@ -32,6 +34,7 @@ export class AuthService
 {
   private readonly http = inject(HttpClient);
   private readonly appConfig = inject(AppConfigService);
+  private readonly telegramWebApp = inject(TelegramWebAppService);
 
   private get apiBase(): string { return this.appConfig.apiUrl; }
 
@@ -57,7 +60,40 @@ export class AuthService
   constructor()
   {
     this.restoreSession();
+    this.initTelegramAuth();
     this.initGoogleIdentity();
+  }
+
+  private initTelegramAuth(): void
+  {
+    if (this.telegramWebApp.isTelegramWebApp() && this.telegramWebApp.initData)
+    {
+      const user = this.telegramWebApp.telegramUser();
+      const tgUserId = user?.id || 0;
+      const username = user?.username || '';
+      const name = this.telegramWebApp.getFormattedUserName() || 'Telegram User';
+      const initData = this.telegramWebApp.initData;
+
+      if (tgUserId > 0)
+      {
+        this.telegramLogin(tgUserId, username, name, initData).subscribe({
+          next: () => console.log('Telegram WebApp Auto-Authenticated successfully!'),
+          error: (err) => console.warn('Telegram WebApp Auth error:', err)
+        });
+      }
+    }
+  }
+
+  telegramLogin(telegramUserId: number, username?: string, name?: string, initData?: string): Observable<AuthResponse>
+  {
+    return this.http.post<AuthResponse>(`${this.apiBase}/telegram/auth`, {
+      telegramUserId,
+      username,
+      name,
+      initData
+    }).pipe(
+      tap(res => this.handleAuthSuccess(res))
+    );
   }
 
   private restoreSession(): void
@@ -231,13 +267,14 @@ export class AuthService
   {
     if (res && res.token)
     {
+      const rawUser = (res as any).user;
       const user: User = {
-        id: res.userId,
-        email: res.email,
-        name: res.name,
-        pictureUrl: res.pictureUrl,
-        role: res.role,
-        permissions: res.permissions || []
+        id: res.userId || rawUser?.id,
+        email: res.email || rawUser?.email,
+        name: res.name || rawUser?.name,
+        pictureUrl: res.pictureUrl || rawUser?.pictureUrl,
+        role: res.role || rawUser?.role,
+        permissions: res.permissions || rawUser?.permissions || []
       };
 
       this.token.set(res.token);

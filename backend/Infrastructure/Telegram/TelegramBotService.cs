@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -16,6 +17,9 @@ public class TelegramBotService
     private readonly ITelegramBotClient _botClient;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TelegramBotService> _logger;
+    private readonly IMemoryCache _cache;
+
+    private static readonly ConcurrentDictionary<long, DateTime> _lastActionTimes = new();
 
     // Track active quiz sessions per user
     private static readonly ConcurrentDictionary<long, ActiveQuizSession> _activeSessions = new();
@@ -26,11 +30,13 @@ public class TelegramBotService
     public TelegramBotService(
         ITelegramBotClient botClient,
         IServiceProvider serviceProvider,
-        ILogger<TelegramBotService> logger)
+        ILogger<TelegramBotService> logger,
+        IMemoryCache cache)
     {
         _botClient = botClient;
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _cache = cache;
     }
 
     public class ActiveQuizSession
@@ -213,6 +219,15 @@ public class TelegramBotService
         var userId = callbackQuery.From.Id;
         var data = callbackQuery.Data;
 
+        // Rate limiting / debouncing (400ms)
+        var now = DateTime.UtcNow;
+        if (_lastActionTimes.TryGetValue(userId, out var lastTime) && (now - lastTime).TotalMilliseconds < 400)
+        {
+            await _botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
+            return;
+        }
+        _lastActionTimes[userId] = now;
+
         if (data == "ignore")
         {
             await _botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
@@ -289,28 +304,7 @@ public class TelegramBotService
                         {
                             using var scope = _serviceProvider.CreateScope();
                             var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
-                            if (dbContext.Database.IsNpgsql())
-                            {
-                                await dbContext.Database.ExecuteSqlRawAsync(
-                                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
-                                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
-                            }
-
-                            var tgUser = callbackQuery.From;
-                            var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == tgUser.Id);
-                            if (dbUser == null)
-                            {
-                                dbUser = new UserEntity
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Email = $"{tgUser.Id}@telegram.user",
-                                    Name = $"{tgUser.FirstName} {tgUser.LastName}".Trim(),
-                                    TelegramUserId = tgUser.Id,
-                                    TelegramUsername = tgUser.Username
-                                };
-                                dbContext.Users.Add(dbUser);
-                                await dbContext.SaveChangesAsync();
-                            }
+                            await GetOrCreateTelegramUserAsync(dbContext, callbackQuery.From);
                         }
                         catch (Exception ex)
                         {
@@ -490,37 +484,7 @@ public class TelegramBotService
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
-
-            if (dbContext.Database.IsNpgsql())
-            {
-                await dbContext.Database.ExecuteSqlRawAsync(
-                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
-                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
-            }
-
-            var tgUser = pollAnswer.User;
-            var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == tgUser.Id);
-
-            if (dbUser == null)
-            {
-                bool isAdmin = string.Equals(tgUser.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase);
-                dbUser = new UserEntity
-                {
-                    TelegramUserId = tgUser.Id,
-                    TelegramUsername = tgUser.Username,
-                    Name = $"{tgUser.FirstName} {tgUser.LastName}".Trim(),
-                    Email = $"{tgUser.Id}@telegram.user",
-                    Role = isAdmin ? "Admin" : "User"
-                };
-                dbContext.Users.Add(dbUser);
-                await dbContext.SaveChangesAsync();
-            }
-            else if (string.Equals(tgUser.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase) && dbUser.Role != "Admin")
-            {
-                dbUser.Role = "Admin";
-                dbUser.TelegramUsername = tgUser.Username;
-                await dbContext.SaveChangesAsync();
-            }
+            await GetOrCreateTelegramUserAsync(dbContext, pollAnswer.User);
         }
         catch (Exception ex)
         {
@@ -542,13 +506,6 @@ public class TelegramBotService
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
-
-            if (dbContext.Database.IsNpgsql())
-            {
-                await dbContext.Database.ExecuteSqlRawAsync(
-                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
-                    "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
-            }
 
             var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == session.UserId);
             if (dbUser != null)
@@ -597,13 +554,6 @@ public class TelegramBotService
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
-
-        if (dbContext.Database.IsNpgsql())
-        {
-            await dbContext.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
-                "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
-        }
 
         var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == userId);
         string userName = dbUser?.Name ?? "";
@@ -763,5 +713,40 @@ public class TelegramBotService
         }
 
         await _botClient.SendTextMessageAsync(chatId, text, parseMode: ParseMode.Html);
+    }
+
+    private async Task<UserEntity> GetOrCreateTelegramUserAsync(QuizDbContext dbContext, TelegramUser tgUser)
+    {
+        string cacheKey = $"tg_user_{tgUser.Id}";
+        if (_cache.TryGetValue(cacheKey, out UserEntity? cachedUser) && cachedUser != null)
+        {
+            return cachedUser;
+        }
+
+        var dbUser = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == tgUser.Id);
+        if (dbUser == null)
+        {
+            bool isAdmin = string.Equals(tgUser.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase);
+            dbUser = new UserEntity
+            {
+                Id = Guid.NewGuid(),
+                TelegramUserId = tgUser.Id,
+                TelegramUsername = tgUser.Username,
+                Name = $"{tgUser.FirstName} {tgUser.LastName}".Trim(),
+                Email = $"{tgUser.Id}@telegram.user",
+                Role = isAdmin ? "Admin" : "User"
+            };
+            dbContext.Users.Add(dbUser);
+            await dbContext.SaveChangesAsync();
+        }
+        else if (string.Equals(tgUser.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase) && dbUser.Role != "Admin")
+        {
+            dbUser.Role = "Admin";
+            dbUser.TelegramUsername = tgUser.Username;
+            await dbContext.SaveChangesAsync();
+        }
+
+        _cache.Set(cacheKey, dbUser, TimeSpan.FromMinutes(10));
+        return dbUser;
     }
 }

@@ -97,6 +97,53 @@ public class AuthService(
         );
     }
 
+    public async Task<AuthResponseDto> AuthenticateTelegramUserAsync(long telegramUserId, string? username, string? name)
+    {
+        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == telegramUserId);
+        bool isAdmin = string.Equals(username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase);
+
+        if (user == null)
+        {
+            user = new User
+            {
+                Id = Guid.NewGuid(),
+                TelegramUserId = telegramUserId,
+                TelegramUsername = username,
+                Name = string.IsNullOrWhiteSpace(name) ? "Telegram User" : name,
+                Email = $"{telegramUserId}@telegram.user",
+                Role = isAdmin ? "Admin" : "User",
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            };
+            dbContext.Users.Add(user);
+        }
+        else
+        {
+            user.LastLoginAt = DateTime.UtcNow;
+            if (!string.IsNullOrWhiteSpace(name)) user.Name = name;
+            if (!string.IsNullOrWhiteSpace(username)) user.TelegramUsername = username;
+            if (isAdmin && user.Role != "Admin") user.Role = "Admin";
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var permissions = Permissions.GetPermissionsForRole(user.Role);
+        var jwtToken = GenerateJwtToken(user, permissions, ACCESS_TOKEN_EXPIRATION_SECONDS * 12);
+        var refreshToken = GenerateRefreshToken(user);
+
+        return new AuthResponseDto(
+            Token: jwtToken,
+            RefreshToken: refreshToken,
+            ExpiresInSeconds: ACCESS_TOKEN_EXPIRATION_SECONDS * 12,
+            UserId: user.Id,
+            Email: user.Email,
+            Name: user.Name,
+            PictureUrl: user.PictureUrl,
+            Role: user.Role,
+            Permissions: permissions
+        );
+    }
+
     public async Task<AuthResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(request.UserId) || !Guid.TryParse(request.UserId, out var uId))

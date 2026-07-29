@@ -16,10 +16,11 @@ public static class DbInitializer
                 {
                     await context.Database.MigrateAsync();
 
-                    // Safely ensure Telegram columns exist on production Users table
+                    // Safely ensure Telegram columns and index exist on production Users table
                     await context.Database.ExecuteSqlRawAsync(
                         "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUserId\" bigint NULL; " +
-                        "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL;");
+                        "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"TelegramUsername\" text NULL; " +
+                        "CREATE INDEX IF NOT EXISTS \"IX_Users_TelegramUserId\" ON \"Users\" (\"TelegramUserId\");");
                 }
                 else
                 {

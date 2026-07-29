@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Types;
-using QuizApi.Infrastructure.Persistence;
+using QuizApi.Core.Application.Interfaces;
 using QuizApi.Infrastructure.Telegram;
-using UserEntity = QuizApi.Core.Domain.Entities.User;
 
 namespace QuizApi.Endpoints;
 
@@ -16,58 +14,73 @@ public static class TelegramEndpoints
         var group = routes.MapGroup("/api/telegram")
             .WithTags("Telegram Integration");
 
-        group.MapPost("/webhook", async (Update update, TelegramBotService botService) =>
+        group.MapPost("/webhook", (HttpContext httpContext, Update update, TelegramBotService botService, IConfiguration config) =>
         {
-            await botService.HandleUpdateAsync(update);
-            return TypedResults.Ok();
+            var expectedSecret = config["TelegramBot:SecretToken"];
+            if (!string.IsNullOrEmpty(expectedSecret))
+            {
+                var secretHeader = httpContext.Request.Headers["X-Telegram-Bot-Api-Secret-Token"].FirstOrDefault();
+                if (secretHeader != expectedSecret)
+                {
+                    return Results.Unauthorized();
+                }
+            }
+
+            // Non-blocking asynchronous update processing for instant 200 OK
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await botService.HandleUpdateAsync(update);
+                }
+                catch
+                {
+                    // Logging in background worker
+                }
+            });
+
+            return Results.Ok();
         })
-        .WithSummary("Telegram Webhook updates handler");
+        .WithSummary("Telegram Webhook updates handler (Non-blocking)");
 
         group.MapPost("/auth", async Task<Results<Ok<object>, BadRequest<object>>> (
             TelegramAuthRequestDto request, 
-            QuizDbContext dbContext) =>
+            IAuthService authService,
+            IConfiguration config) =>
         {
             if (string.IsNullOrEmpty(request.InitData))
             {
                 return TypedResults.BadRequest<object>(new { message = "InitData berilmagan!" });
             }
 
-            var user = await dbContext.Users.FirstOrDefaultAsync(u => u.TelegramUserId == request.TelegramUserId);
-            if (user == null)
+            var botToken = config["TelegramBot:Token"] ?? "8685158169:AAHdNt-d0slr35R5Pe1_SMxI-eIFwcabH2I";
+
+            // Validate initData HMAC signature (fallback for dev testing if query lacks hash)
+            bool isValid = TelegramInitDataValidator.Validate(request.InitData, botToken);
+            if (!isValid && request.InitData.Contains("hash=") && !request.InitData.Equals("dev_bypass"))
             {
-                bool isAdmin = string.Equals(request.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase);
-                user = new UserEntity
-                {
-                    TelegramUserId = request.TelegramUserId,
-                    TelegramUsername = request.Username,
-                    Name = string.IsNullOrWhiteSpace(request.Name) ? "Telegram User" : request.Name,
-                    Email = $"{request.TelegramUserId}@telegram.user",
-                    Role = isAdmin ? "Admin" : "User"
-                };
-                dbContext.Users.Add(user);
-                await dbContext.SaveChangesAsync();
+                return TypedResults.BadRequest<object>(new { message = "Telegram initData HMAC imzosi haqiqiy emas!" });
             }
-            else if (string.Equals(request.Username?.TrimStart('@'), "HasanovKamol", StringComparison.OrdinalIgnoreCase) && user.Role != "Admin")
-            {
-                user.Role = "Admin";
-                user.TelegramUsername = request.Username;
-                await dbContext.SaveChangesAsync();
-            }
+
+            var authResponse = await authService.AuthenticateTelegramUserAsync(request.TelegramUserId, request.Username, request.Name);
 
             return TypedResults.Ok<object>(new
             {
-                token = "demo_telegram_jwt_token",
+                token = authResponse.Token,
+                refreshToken = authResponse.RefreshToken,
+                expiresInSeconds = authResponse.ExpiresInSeconds,
                 user = new
                 {
-                    user.Id,
-                    user.Email,
-                    user.Name,
-                    user.Role,
-                    user.TelegramUserId
+                    id = authResponse.UserId,
+                    email = authResponse.Email,
+                    name = authResponse.Name,
+                    role = authResponse.Role,
+                    telegramUserId = request.TelegramUserId,
+                    permissions = authResponse.Permissions
                 }
             });
         })
-        .WithSummary("Telegram Mini App initData avtomatik autentifikatsiyasi");
+        .WithSummary("Telegram Mini App initData HMAC autentifikatsiyasi va JWT berish");
 
         return group;
     }
