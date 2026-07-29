@@ -103,7 +103,7 @@ public class TelegramBotService
         }
         else if (text.StartsWith("/leaderboard"))
         {
-            await SendLeaderboardAsync(chatId);
+            await SendLeaderboardAsync(chatId, message.From);
         }
         else
         {
@@ -267,7 +267,7 @@ public class TelegramBotService
         }
         else if (data == "showleaderboard")
         {
-            await SendLeaderboardAsync(chatId);
+            await SendLeaderboardAsync(chatId, callbackQuery.From);
         }
         else if (data.StartsWith("cat:"))
         {
@@ -762,10 +762,24 @@ public class TelegramBotService
         await _botClient.SendTextMessageAsync(chatId, statsText, parseMode: ParseMode.Html);
     }
 
-    private async Task SendLeaderboardAsync(long chatId)
+    private async Task SendLeaderboardAsync(long chatId, TelegramUser? tgUser)
     {
+        if (tgUser == null) return;
+
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+
+        var user = await GetOrCreateTelegramUserAsync(dbContext, tgUser);
+
+        if (user == null || !string.Equals(user.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            await _botClient.SendTextMessageAsync(
+                chatId: chatId,
+                text: "⛔️ <b>Kechirasiz!</b> Leaderboard (Top dasturchilar reytingi) faqat <b>Admin</b> rolidagi foydalanuvchilar uchun ruxsat etilgan.",
+                parseMode: ParseMode.Html
+            );
+            return;
+        }
 
         var topUsers = await dbContext.QuizAttempts
             .GroupBy(a => a.UserName)
@@ -774,12 +788,12 @@ public class TelegramBotService
             .Take(10)
             .ToListAsync();
 
-        string text = "🏆 <b>TOP Dasturchilar Reytingi:</b>\n\n";
+        string text = "🏆 <b>TOP Dasturchilar Reytingi (Admin Console):</b>\n\n";
         for (int i = 0; i < topUsers.Count; i++)
         {
             var u = topUsers[i];
             string medal = i switch { 0 => "🥇", 1 => "🥈", 2 => "🥉", _ => $"{i + 1}." };
-            text += $"{medal} <b>{u.Name}</b> — {Math.Round(u.AvgScore, 1)}% ({u.Total} test)\n";
+            text += $"{medal} <b>{HtmlEncode(u.Name)}</b> — {Math.Round(u.AvgScore, 1)}% ({u.Total} test)\n";
         }
 
         await _botClient.SendTextMessageAsync(chatId, text, parseMode: ParseMode.Html);

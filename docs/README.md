@@ -41,6 +41,11 @@ Welcome to the official modular documentation for the **QuizMaster PRO** Full-St
 
 ---
 
+### 5. 🧠 Question Data Refinement & AI Optimization (`./docs/`)
+- 📄 **[question-refinement-log.md](./question-refinement-log.md)**: AI Question Batch Refinement, Correct Option Fixes & Code Snippet Enrichment Log
+
+---
+
 ## 🚀 Quick Execution Commands
 
 ### Run Full-Stack Test Suite (40/40 Passed)
