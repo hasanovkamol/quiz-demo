@@ -66,22 +66,29 @@ export class AuthService
 
   private initTelegramAuth(): void
   {
-    if (this.telegramWebApp.isTelegramWebApp() && this.telegramWebApp.initData)
-    {
-      const user = this.telegramWebApp.telegramUser();
-      const tgUserId = user?.id || 0;
-      const username = user?.username || '';
-      const name = this.telegramWebApp.getFormattedUserName() || 'Telegram User';
-      const initData = this.telegramWebApp.initData;
-
-      if (tgUserId > 0)
+    let retries = 30;
+    const attemptAuth = () => {
+      if (this.telegramWebApp.isTelegramWebApp() && this.telegramWebApp.initData)
       {
-        this.telegramLogin(tgUserId, username, name, initData).subscribe({
-          next: () => console.log('Telegram WebApp Auto-Authenticated successfully!'),
-          error: (err) => console.warn('Telegram WebApp Auth error:', err)
-        });
+        const user = this.telegramWebApp.telegramUser();
+        const tgUserId = user?.id || 0;
+        const username = user?.username || '';
+        const name = this.telegramWebApp.getFormattedUserName() || 'Telegram User';
+        const initData = this.telegramWebApp.initData;
+
+        if (tgUserId > 0 && !this.token())
+        {
+          this.telegramLogin(tgUserId, username, name, initData).subscribe({
+            next: () => console.log('Telegram WebApp Auto-Authenticated successfully!'),
+            error: (err) => console.warn('Telegram WebApp Auth error:', err)
+          });
+        }
+      } else if (retries > 0) {
+        retries--;
+        setTimeout(attemptAuth, 150);
       }
-    }
+    };
+    attemptAuth();
   }
 
   telegramLogin(telegramUserId: number, username?: string, name?: string, initData?: string): Observable<AuthResponse>

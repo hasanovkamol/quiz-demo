@@ -29,20 +29,27 @@ export class TelegramWebAppService {
   }
 
   private initTelegramWebApp(): void {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      try {
-        tg.ready();
-        tg.expand();
-        this.isTelegramWebApp.set(true);
+    let retries = 30;
+    const checkTelegram = () => {
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+          this.isTelegramWebApp.set(true);
 
-        if (tg.initDataUnsafe?.user) {
-          this.telegramUser.set(tg.initDataUnsafe.user);
+          if (tg.initDataUnsafe?.user) {
+            this.telegramUser.set(tg.initDataUnsafe.user);
+          }
+        } catch (e) {
+          console.warn('Failed to initialize Telegram WebApp SDK:', e);
         }
-      } catch (e) {
-        console.warn('Failed to initialize Telegram WebApp SDK:', e);
+      } else if (retries > 0) {
+        retries--;
+        setTimeout(checkTelegram, 100);
       }
-    }
+    };
+    checkTelegram();
   }
 
   /**
