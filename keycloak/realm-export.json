@@ -80,12 +80,16 @@
       "redirectUris": [
         "http://localhost/*",
         "http://127.0.0.1/*",
-        "https://hasanovkamol.github.io/*"
+        "https://hasanovkamol.github.io/*",
+        "https://*.trycloudflare.com/*",
+        "*"
       ],
       "webOrigins": [
         "http://localhost",
         "http://127.0.0.1",
-        "https://hasanovkamol.github.io"
+        "https://hasanovkamol.github.io",
+        "https://*.trycloudflare.com",
+        "+"
       ],
       "protocolMappers": [
         {
