@@ -27,3 +27,7 @@ backend/appsettings.Development.json
 # Local environment secrets
 .env
 *.env.local
+
+# Python & Graphify
+.venv/
+graphify-out/

@@ -43,6 +43,7 @@ Welcome to the official modular documentation for the **QuizMaster PRO** Full-St
 
 ### 5. 🧠 Question Data Refinement & AI Optimization (`./docs/`)
 - 📄 **[question-refinement-log.md](./question-refinement-log.md)**: AI Question Batch Refinement, Correct Option Fixes & Code Snippet Enrichment Log
+- 📄 **[graphify-optimization.md](./graphify-optimization.md)**: Graphify AST Knowledge Graph & LLM Token Reduction Indexing
 
 ---
 

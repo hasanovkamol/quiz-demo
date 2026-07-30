@@ -11,3 +11,9 @@
     - `docs/ui-documentation.md`: Angular 18+ SPA, Signals reactivity, components, and Tailwind styling.
     - `docs/architecture-and-deployment.md`: Docker Compose multi-container topology and LAN deployment guides.
   - If a new feature or module is created, generate a dedicated `docs/<feature-name>.md` file and register it in `docs/README.md`.
+
+## 🕸️ Graphify Token Optimization & Knowledge Graph Rule
+
+- **Prioritize Graphify Navigation**:
+  - AI agents MUST consult `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json` before initiating brute-force file scans or broad search queries.
+  - After completing major structural code edits, run `~/.local/bin/graphify . --code-only && ~/.local/bin/graphify cluster-only .` to keep the AST graph synchronized.
