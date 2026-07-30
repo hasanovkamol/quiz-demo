@@ -1,7 +1,7 @@
 {
-  "apiUrl": "https://biology-proposals-big-employer.trycloudflare.com/api",
+  "apiUrl": "https://pale-enlargement-donated-sagem.trycloudflare.com/api",
   "keycloak": {
-    "url": "https://biology-proposals-big-employer.trycloudflare.com/auth",
+    "url": "https://pale-enlargement-donated-sagem.trycloudflare.com/auth",
     "realm": "quizmaster-realm",
     "clientId": "quizmaster-app"
   }
