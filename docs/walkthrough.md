@@ -40,6 +40,7 @@ QuizMaster PRO is an enterprise-grade, microservice-ready Full-Stack assessment 
     - **`quiz-ui`**: Asosiy Angular 18 SPA interaktiv test platformasi (eski `ui/` papkasi mantiqiy nom bilan `quiz-ui` ga o'zgartirildi).
     - **`about-ui`**: Yangi "O'zimiz haqimizda" (About Us / Platform Landing Page) veb-ilovasi — QuizMaster PRO platformasi imkoniyatlari, AI integratsiyasi, Senior .NET 10 & Angular 18 arxitekturasi, muallif Kamoliddin Hasanov, Telegram Bot & Mini App hamda Telegram Stars (⭐️) qo'llab-quvvatlash xizmatlarini taqdim etuvchi zamonaviy glassmorphic platforma.
     - **Docker & Gateway Routing**: `docker-compose.yml` da `quiz-ui` (port 8081) va `about-ui` (port 8083) servislar ajratildi. Nginx Gateway (`gateway/nginx.conf`) orqali `/about/` yo'nalishi `about-ui` ga hamda `/` yo'nalishi `quiz-ui` ga proxy qilindi.
+22. **Cloudflare Tunnel & Dynamic Gateway CORS Optimization**: `gateway/nginx.conf` ichida `Access-Control-Allow-Origin` dinamik ravishda kelayotgan request origin (`$http_origin`) bo'yicha moslashtirildi. Bu har safar yangilanadigan Cloudflare Tunnel domenlari (`https://*.trycloudflare.com`), GitHub Pages (`https://hasanovkamol.github.io`) va mahalliy `localhost` so'rovlarida kelib chiqadigan CORS to'siqlarini bartaraf etdi. Keycloak `realm-export.json` mijoz sozlamalariga ham trycloudflare variantlari qo'shildi.
 
 ---
 
