@@ -1,7 +1,7 @@
 {
-  "apiUrl": "https://pale-enlargement-donated-sagem.trycloudflare.com/api",
+  "apiUrl": "https://resume-targeted-lid-italiano.trycloudflare.com/api",
   "keycloak": {
-    "url": "https://pale-enlargement-donated-sagem.trycloudflare.com/auth",
+    "url": "https://resume-targeted-lid-italiano.trycloudflare.com/auth",
     "realm": "quizmaster-realm",
     "clientId": "quizmaster-app"
   }
